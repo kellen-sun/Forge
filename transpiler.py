@@ -25,6 +25,38 @@ def setup_logging():
     logger.addHandler(fh)
     return logger
 
+class TypeAnnotator(ast.NodeVisitor):
+    def __init__(self, var_types):
+        self.var_types = var_types
+        self.builtins = {
+            'sum': 'scalar',
+            'len': 'scalar'
+        }
+
+    def visit_Name(self, node):
+        node.inferred_type = self.var_types.get(node.id, 'unknown')
+
+    def visit_BinOp(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+        ltype = getattr(node.left, 'inferred_type', 'unknown')
+        rtype = getattr(node.right, 'inferred_type', 'unknown')
+        if ltype == rtype:
+            node.inferred_type = ltype
+        elif 'array' in (ltype[0], rtype[0]):
+            node.inferred_type = ltype if ltype[0] == 'array' else rtype
+        else:
+            node.inferred_type = 'scalar'
+    
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            func_name = node.func.id
+            if func_name in self.builtins:
+                node.inferred_type = self.builtins[func_name]
+            else:
+                node.inferred_type = 'unknown'
+        self.generic_visit(node)
+
 def get_func_args(tree):
     args = []
     for node in ast.walk(tree):
@@ -55,12 +87,29 @@ def get_func_name(tree):
             return node.name
     return None
 
+def is_scalar_constant(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
 def get_expr(node):
     global runtime_items
     global buffer_lookup
     if isinstance(node, ast.BinOp):
         left = get_expr(node.left)
         right = get_expr(node.right)
+        if is_scalar_constant(left) and is_scalar_constant(right):
+            l, r = float(left), float(right)
+            if isinstance(node.op, ast.Add):
+                return str(l + r)
+            elif isinstance(node.op, ast.Sub):
+                return str(l - r)
+            elif isinstance(node.op, ast.Mult):
+                return str(l * r)
+            elif isinstance(node.op, ast.Div):
+                return str(l / r)
         op = node.op
         op_map = {
             ast.Add: "+",
@@ -81,6 +130,8 @@ def get_expr(node):
         func_name = node.func.id
         if func_name == "sum":
             return custom_metal.metal_sum(node, buffer_lookup, runtime_items)
+        elif func_name == "len":
+            return str(node.args[0].inferred_type[1])
         else:
             logger.error(f"Unsupported function call: {ast.dump(node)}")
             raise NotImplementedError(f"Unsupported function call: {ast.dump(node)}")
@@ -96,7 +147,10 @@ def get_body(tree):
             body = node.body
             for stmt in body:
                 if isinstance(stmt, ast.Return):
-                    out.append(f"out[id] = {get_expr(stmt.value)};")
+                    returnVal = get_expr(stmt.value)
+                    if is_scalar_constant(returnVal):
+                        return returnVal
+                    out.append(f"out[id] = {returnVal};")
                 elif isinstance(stmt, ast.Expr):
                     # should check if this has side effect in the future
                     out.append(f"{get_expr(stmt)};")           
@@ -113,6 +167,9 @@ def transpile(tree, source: str, rt_items) -> str:
     global runtime_items
     global buffer_lookup
     runtime_items = rt_items
+    n = runtime_items[2]
+    
+    TypeAnnotator({'a': ('array', n), 'b': ('array', n)}).visit(tree)
     logger.info(f"AST:\n{ast.dump(tree, indent=4)}")
 
     args = get_args(tree)
@@ -126,6 +183,8 @@ def transpile(tree, source: str, rt_items) -> str:
     func_name = get_func_name(tree)
 
     body = get_body(tree)
+    if is_scalar_constant(body):
+        return float(body)
 
     kernel = f"""
 #include <metal_stdlib>

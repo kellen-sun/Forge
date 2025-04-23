@@ -7,10 +7,10 @@ DSL Language Description:
 1. Currently must take in numpy float32 arrays of the same length as input and return that as output.
 2. Also supports binary operations, +, -, *, /
 3. Supports constants (interpreted as an array full with that constant)
-4. Supports sum()
+4. Supports sum(), len()
 
 Personal To-Do:
 1. Add more features to the transpiler: matrix mults
 2. Learn about what comes after the transpilation, how to manage resources to GPU, when to read/write from it and CPU
 3. Check-up on ideas and methods from other similar projects like mlx
-4. deducing types: so that sum(a)*sum(b) gets treated as scalar mult not vector
+4. deducing types: so that sum(a)*sum(b) gets treated as scalar mult not vector (traverse AST, to label types?)

@@ -45,6 +45,8 @@ def metal(func):
                 ))
 
         source_str = transpile(tree, source, (device, bufs, n))
+        if not isinstance(source_str, str):
+            return source_str
         options = None
         lib, error = device.newLibraryWithSource_options_error_(source_str, options, None)
         if lib is None:
