@@ -1,0 +1,2 @@
+# A transpiler and runtime for a Pythonic DSL that compiles to Metal and executes GPU kernels from within Python.
+This project aims to be a subset of what numba is to CUDA for Apple Silicon. It aims to transpile numpy like code (and more in the future) directly to Metal at run-time and execute it on the GPU. It'll start as being similar to mlx and diversify beyond (hopefully). This will allow for decorating numpy like functions with @metal, to directly run them on GPU.
