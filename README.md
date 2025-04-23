@@ -4,9 +4,13 @@ This project aims to be a subset of what numba is to CUDA for Apple Silicon. It 
 It currently also includes ./denoiser folder, which is a simple code snippet aimed at removing background noise. Currently, aiming to be able to transpile that.
 
 DSL Language Description:
-
+1. Currently must take in numpy float32 arrays of the same length as input and return that as output.
+2. Also supports binary operations, +, -, *, /
+3. Supports constants (interpreted as an array full with that constant)
+4. Supports sum()
 
 Personal To-Do:
-1. Add more features to the transpiler, constants, binops, etc.
+1. Add more features to the transpiler: matrix mults
 2. Learn about what comes after the transpilation, how to manage resources to GPU, when to read/write from it and CPU
 3. Check-up on ideas and methods from other similar projects like mlx
+4. deducing types: so that sum(a)*sum(b) gets treated as scalar mult not vector

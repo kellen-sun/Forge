@@ -1,6 +1,7 @@
 import inspect
 import ast
 import logging
+import custom_metal
 
 def setup_logging():
     logger = logging.getLogger("metal_transpiler")
@@ -55,6 +56,8 @@ def get_func_name(tree):
     return None
 
 def get_expr(node):
+    global runtime_items
+    global buffer_lookup
     if isinstance(node, ast.BinOp):
         left = get_expr(node.left)
         right = get_expr(node.right)
@@ -64,7 +67,6 @@ def get_expr(node):
             ast.Sub: "-",
             ast.Mult: "*",
             ast.Div: "/",
-            ast.Mod: "%",
         }
         if op_map.get(type(op)):
             return f"{left} {op_map[type(op)]} {right}"
@@ -75,6 +77,14 @@ def get_expr(node):
         return f"{node.id}[id]"
     elif isinstance(node, ast.Constant):
         return str(node.value)
+    elif isinstance(node, ast.Call):
+        func_name = node.func.id
+        if func_name == "sum":
+            return custom_metal.metal_sum(node, buffer_lookup, runtime_items)
+        else:
+            logger.error(f"Unsupported function call: {ast.dump(node)}")
+            raise NotImplementedError(f"Unsupported function call: {ast.dump(node)}")
+
     else:
         logger.error(f"Unsupported expression: {ast.dump(node)}")
         raise NotImplementedError(f"Unsupported expression: {ast.dump(node)}")
@@ -99,13 +109,20 @@ def get_body(tree):
     logger.info(f"body: {out}")
     return "\n    ".join(out)
 
-def transpile(tree, source: str) -> str:
+def transpile(tree, source: str, rt_items) -> str:
+    global runtime_items
+    global buffer_lookup
+    runtime_items = rt_items
     logger.info(f"AST:\n{ast.dump(tree, indent=4)}")
 
     args = get_args(tree)
     buf_decls = "\n    ".join([
-        f"device float* {arg} [[ buffer({i}) ]]," for i, arg in enumerate(args)
+        f"device float* {arg} [[ buffer({3+i}) ]]," for i, arg in enumerate(args)
     ])
+    buffer_lookup = {"out": 0, "tempA": 1, "tempB": 2}
+    for i, arg in enumerate(args):
+        buffer_lookup[arg] = i + 3
+    logger.info(f"buffer_lookup: {buffer_lookup}")
     func_name = get_func_name(tree)
 
     body = get_body(tree)
@@ -115,8 +132,10 @@ def transpile(tree, source: str) -> str:
 using namespace metal;
 
 kernel void {func_name}(
+    device float* out [[ buffer(0) ]],
+    device float* tempA [[ buffer(1) ]],
+    device float* tempB [[ buffer(2) ]],
     {buf_decls}
-    device float* out [[ buffer({len(args)}) ]],
     uint id [[ thread_position_in_grid ]]
 ) {{
     {body}
@@ -128,3 +147,5 @@ kernel void {func_name}(
     return kernel
 
 logger = setup_logging()
+buffer_lookup = {}
+runtime_items = None

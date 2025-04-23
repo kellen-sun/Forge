@@ -2,7 +2,6 @@ import inspect
 import ast
 import Metal
 import numpy as np
-from Foundation import NSURL
 from transpiler import transpile, get_args, get_func_args
 
 
@@ -10,24 +9,13 @@ def metal(func):
     source = inspect.getsource(func)
     tree = ast.parse(source)
     
-    # Extract the operation in `return a + b`
-    metal_code = transpile(tree, source)
-    metal_args = get_args(tree) + ["out"]
+    metal_args = get_args(tree)
     func_args = get_func_args(tree)
 
     def wrapper(*args, **kwargs):
         device = Metal.MTLCreateSystemDefaultDevice()
-        source_str = metal_code
-        options = None
-        lib, error = device.newLibraryWithSource_options_error_(source_str, options, None)
-        if lib is None:
-            print("Failed to load Metal library:", error)
-        fn = lib.newFunctionWithName_(func.__name__)
 
-        # Create pipeline
-        pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
-
-        np_inputs = []
+        np_inputs = [np.zeros_like(args[0]),np.zeros_like(args[0]),np.zeros_like(args[0])]
         for i in range(len(func_args)):
             np_inputs.append(args[i])
         # For now we assume all inputs are numpy arrays of same type
@@ -37,16 +25,34 @@ def metal(func):
         n = np_inputs[0].size
 
         # Allocate Metal buffers
-        bufs = []
+        bufs = [device.newBufferWithLength_options_(
+                    np_inputs[0].nbytes, 0
+                ), 
+                device.newBufferWithLength_options_(
+                    np_inputs[1].nbytes, 0
+                ),
+                device.newBufferWithLength_options_(
+                    np_inputs[2].nbytes, 0
+                )]
         for i in range(len(func_args)):
             bufs.append(device.newBufferWithBytes_length_options_(
-                np_inputs[i].tobytes(), np_inputs[i].nbytes, 0
+                np_inputs[i+3].tobytes(), np_inputs[i].nbytes, 0
             ))
         for i in range(len(metal_args)):
             if metal_args[i] not in func_args:
                 bufs.append(device.newBufferWithLength_options_(
-                    np_inputs[i].nbytes, 0
+                    np_inputs[i+3].nbytes, 0
                 ))
+
+        source_str = transpile(tree, source, (device, bufs, n))
+        options = None
+        lib, error = device.newLibraryWithSource_options_error_(source_str, options, None)
+        if lib is None:
+            print("Failed to load Metal library:", error)
+        fn = lib.newFunctionWithName_(func.__name__)
+
+        # Create pipeline
+        pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
         # Create command queue + buffer
         cmd_queue = device.newCommandQueue()
@@ -69,7 +75,7 @@ def metal(func):
         cmd_buf.waitUntilCompleted()
 
         # Access the raw memory from the Metal buffer
-        raw = bufs[-1].contents()[:4*n]
+        raw = bufs[0].contents()[:4*n]
         data_bytes = b''.join(raw)  # Flatten to a single bytes object
         result = np.frombuffer(data_bytes, dtype=np.float32)
         return result
