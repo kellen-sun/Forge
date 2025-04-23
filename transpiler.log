@@ -1,0 +1,35 @@
+[12:09:19] [INFO] AST:
+Module(
+    body=[
+        FunctionDef(
+            name='add_arrays',
+            args=arguments(
+                args=[
+                    arg(arg='a'),
+                    arg(arg='b')]),
+            body=[
+                Assign(
+                    targets=[
+                        Name(id='x', ctx=Store())],
+                    value=BinOp(
+                        left=Name(id='a', ctx=Load()),
+                        op=Add(),
+                        right=Name(id='b', ctx=Load()))),
+                Assign(
+                    targets=[
+                        Name(id='y', ctx=Store())],
+                    value=BinOp(
+                        left=Name(id='a', ctx=Load()),
+                        op=Mult(),
+                        right=Constant(value=2))),
+                Return(
+                    value=BinOp(
+                        left=Name(id='x', ctx=Load()),
+                        op=Mult(),
+                        right=Name(id='y', ctx=Load())))],
+            decorator_list=[
+                Name(id='metal', ctx=Load())])])
+[12:09:19] [INFO] args: ['a', 'b', 'x', 'y']
+[12:09:19] [INFO] func_name: add_arrays
+[12:09:19] [INFO] body: ['x[id] = a[id] + b[id];', 'y[id] = a[id] * 2;', 'out[id] = x[id] * y[id];']
+[12:09:19] [INFO] args: ['a', 'b', 'x', 'y']
