@@ -1,4 +1,3 @@
-import inspect
 import ast
 import logging
 import custom_metal
@@ -24,38 +23,6 @@ def setup_logging():
     logger.addHandler(ch)
     logger.addHandler(fh)
     return logger
-
-class TypeAnnotator(ast.NodeVisitor):
-    def __init__(self, var_types):
-        self.var_types = var_types
-        self.builtins = {
-            'sum': 'scalar',
-            'len': 'scalar'
-        }
-
-    def visit_Name(self, node):
-        node.inferred_type = self.var_types.get(node.id, 'unknown')
-
-    def visit_BinOp(self, node):
-        self.visit(node.left)
-        self.visit(node.right)
-        ltype = getattr(node.left, 'inferred_type', 'unknown')
-        rtype = getattr(node.right, 'inferred_type', 'unknown')
-        if ltype == rtype:
-            node.inferred_type = ltype
-        elif 'array' in (ltype[0], rtype[0]):
-            node.inferred_type = ltype if ltype[0] == 'array' else rtype
-        else:
-            node.inferred_type = 'scalar'
-    
-    def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-            if func_name in self.builtins:
-                node.inferred_type = self.builtins[func_name]
-            else:
-                node.inferred_type = 'unknown'
-        self.generic_visit(node)
 
 def get_func_args(tree):
     args = []
@@ -115,10 +82,15 @@ def get_expr(node):
             ast.Add: "+",
             ast.Sub: "-",
             ast.Mult: "*",
-            ast.Div: "/",
+            ast.Div: "/"
         }
         if op_map.get(type(op)):
             return f"{left} {op_map[type(op)]} {right}"
+        elif isinstance(op, ast.MatMult):
+            # run another kernel to do the matmult, get the result in tempA
+            # return tempA[id]
+            custom_metal.metal_matmult(node, buffer_lookup, runtime_items)
+            return f"out[id]"
         else:
             logger.error(f"Unsupported binary operator: {ast.dump(op)}")
             raise NotImplementedError(f"Unsupported binary operator: {ast.dump(op)}")
@@ -168,17 +140,16 @@ def transpile(tree, source: str, rt_items) -> str:
     global buffer_lookup
     runtime_items = rt_items
     n = runtime_items[2]
-    
-    TypeAnnotator({'a': ('array', n), 'b': ('array', n)}).visit(tree)
+
     logger.info(f"AST:\n{ast.dump(tree, indent=4)}")
 
     args = get_args(tree)
     buf_decls = "\n    ".join([
-        f"device float* {arg} [[ buffer({3+i}) ]]," for i, arg in enumerate(args)
+        f"device float* {arg} [[ buffer({4+i}) ]]," for i, arg in enumerate(args)
     ])
     buffer_lookup = {"out": 0, "tempA": 1, "tempB": 2}
     for i, arg in enumerate(args):
-        buffer_lookup[arg] = i + 3
+        buffer_lookup[arg] = i + 4
     logger.info(f"buffer_lookup: {buffer_lookup}")
     func_name = get_func_name(tree)
 
