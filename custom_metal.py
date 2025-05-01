@@ -1,15 +1,15 @@
 import transpiler
 import ast
 import Metal
+from MetalPerformanceShaders import *
 import numpy as np
 from Foundation import NSURL
 
 def overwrite_buffer(device_buffer, np_array):
     # Get raw pointer to buffer contents
-    ptr = device_buffer.contents().as_buffer(np_array.nbytes)
-
+    mv = device_buffer.contents().as_buffer(np_array.nbytes)
     # Copy the numpy array's raw bytes directly
-    np.copyto(np.frombuffer(ptr, dtype=np.uint8), np_array.view(np.uint8))
+    mv[:] = np_array.view(np.uint8)
 
 class ReplaceSums(ast.NodeTransformer):
     def __init__(self, metal_sum_fn, buffer_lookup, runtime_items):
@@ -187,7 +187,7 @@ kernel void {func_name}(
     cmd_buf.waitUntilCompleted()
     count = left_node.inferred_type[1] * left_node.inferred_type[2]
     ptr = bufs[0].contents().as_buffer(4 * count)
-    leftMat = np.frombuffer(ptr, dtype=np.float32)
+    leftMat = np.frombuffer(ptr, dtype=np.float32).copy()       # Make a copy to avoid overwriting
     
 
     decls = []
@@ -240,44 +240,28 @@ kernel void {func_name}(
     ptr = bufs[0].contents().as_buffer(4 * count)
     rightMat = np.frombuffer(ptr, dtype=np.float32)
 
-    # Now we load the two matrices into tempA and tempB
-    # Load the metallib
-    url = NSURL.fileURLWithPath_("./metal_samples/matmult_kernel.metallib")
-    lib, error = device.newLibraryWithURL_error_(url, None)
-    if lib is None:
-        print("Failed to load metallib:", error)
-        return
-    
-    overwrite_buffer(bufs[1], leftMat.astype(np.float32))
-    overwrite_buffer(bufs[2], rightMat.astype(np.float32))
+    overwrite_buffer(bufs[1], leftMat)
+    overwrite_buffer(bufs[2], rightMat)
 
-    dims = np.array([left_node.inferred_type[1], right_node.inferred_type[2], left_node.inferred_type[2]], dtype=np.uint32)
-    overwrite_buffer(bufs[3], dims)
+    dims = np.array([left_node.inferred_type[1], left_node.inferred_type[2], right_node.inferred_type[2]], dtype=np.uint32)
 
+    descA = MPSMatrixDescriptor.matrixDescriptorWithRows_columns_rowBytes_dataType_(
+        dims[0], dims[1], dims[1] * 4, MPSDataTypeFloat32)
+    descB = MPSMatrixDescriptor.matrixDescriptorWithRows_columns_rowBytes_dataType_(
+        dims[1], dims[2], dims[2] * 4, MPSDataTypeFloat32)
+    descC = MPSMatrixDescriptor.matrixDescriptorWithRows_columns_rowBytes_dataType_(
+        dims[0], dims[2], dims[2] * 4, MPSDataTypeFloat32)
+    matA = MPSMatrix.alloc().initWithBuffer_descriptor_(bufs[1], descA)
+    matB = MPSMatrix.alloc().initWithBuffer_descriptor_(bufs[2], descB)
+    matC = MPSMatrix.alloc().initWithBuffer_descriptor_(bufs[0], descC)
 
-    # Get the function + pipeline
-    fn = lib.newFunctionWithName_("matmult_kernel")
-    pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
+    gemm = MPSMatrixMultiplication.alloc().initWithDevice_transposeLeft_transposeRight_resultRows_resultColumns_interiorColumns_alpha_beta_(
+    device, False, False, dims[0], dims[2], dims[1], 1.0, 0.0)
 
     # Create new command buffer + encoder
     cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
-    encoder = cmd_buf.computeCommandEncoder()
-
-    encoder.setComputePipelineState_(pipeline_state)
-
-    encoder.setBuffer_offset_atIndex_(bufs[1], 0, 1)  # input
-    encoder.setBuffer_offset_atIndex_(bufs[2], 0, 2)  # input
-    encoder.setBuffer_offset_atIndex_(bufs[3], 0, 3)  # input
-    encoder.setBuffer_offset_atIndex_(bufs[0], 0, 0)  # output
-
-    # Launch with one threadgroup (for simplicity)
-    width = 16
-    threads_per_group = Metal.MTLSizeMake(width, width, 1)
-    num_threadgroups = Metal.MTLSizeMake((dims[1] + width - 1) // width, (dims[0] + width - 1) // width, 1)  # only 1 result
-
-    encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
-    encoder.endEncoding()
+    gemm.encodeToCommandBuffer_leftMatrix_rightMatrix_resultMatrix_(cmd_buf, matA, matB, matC)
     cmd_buf.commit()
     cmd_buf.waitUntilCompleted()
     return "out"

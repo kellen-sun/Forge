@@ -77,41 +77,35 @@ def metal(func):
         device = Metal.MTLCreateSystemDefaultDevice()
 
         # what size should temp bufferes and in-body variables be?
-        np_inputs = [np.zeros(s), np.zeros_like(args[0].flatten()), np.zeros_like(args[0].flatten())]
+        np_inputs = [np.empty(s), np.empty_like(args[0].ravel()), np.empty_like(args[0].ravel())]
         # Running assumption that function args are arrays or matrices
         for i in range(len(func_args)):
-            np_inputs.append(args[i].flatten())
+            np_inputs.append(args[i].ravel())
         for i in range(len(metal_args)):
             if metal_args[i] not in func_args:
-                np_inputs.append(np.zeros_like(args[0]))
-        n = np_inputs[0].size
+                np_inputs.append(np.empty_like(args[0]))
 
         # Allocate Metal buffers
-        bufs = [device.newBufferWithBytes_length_options_(
-                    np_inputs[0].tobytes(), np_inputs[0].nbytes, Metal.MTLResourceStorageModeShared
-                ), 
-                device.newBufferWithBytes_length_options_(
-                    np_inputs[1].tobytes(), np_inputs[1].nbytes, Metal.MTLResourceStorageModeShared
-                ),
-                device.newBufferWithBytes_length_options_(
-                    np_inputs[2].tobytes(), np_inputs[2].nbytes, Metal.MTLResourceStorageModeShared
-                )]
+        mv0 = memoryview(np_inputs[0])
+        mv1 = memoryview(np_inputs[1])
+        mv2 = memoryview(np_inputs[2])
+        bufs = [device.newBufferWithBytes_length_options_(mv0, mv0.nbytes, Metal.MTLResourceStorageModeShared), 
+                device.newBufferWithBytes_length_options_(mv1, mv1.nbytes, Metal.MTLResourceStorageModeShared),
+                device.newBufferWithBytes_length_options_(mv2, mv2.nbytes, Metal.MTLResourceStorageModeShared)]
         dims = []
         for arg in func_args:
             # Running assumption that function args are arrays or matrices
             dims = dims + list(arg_types[arg][1:])
         bufs.append(device.newBufferWithBytes_length_options_(np.array(dims, dtype=np.uint32), len(dims) * 4, Metal.MTLResourceStorageModeShared))
         for i in range(len(func_args)):
-            bufs.append(device.newBufferWithBytes_length_options_(
-                np_inputs[i+3].tobytes(), np_inputs[i+3].nbytes, Metal.MTLResourceStorageModeShared
-            ))
+            mv = memoryview(np_inputs[i+3])
+            bufs.append(device.newBufferWithBytes_length_options_(mv, mv.nbytes, Metal.MTLResourceStorageModeShared))
         for i in range(len(metal_args)):
             if metal_args[i] not in func_args:
-                bufs.append(device.newBufferWithBytes_length_options_(
-                    np_inputs[i+3].tobytes(), np_inputs[i+3].nbytes, Metal.MTLResourceStorageModeShared
-                ))
+                mv = memoryview(np_inputs[i+3])
+                bufs.append(device.newBufferWithBytes_length_options_(mv, mv.nbytes, Metal.MTLResourceStorageModeShared))
 
-        source_str = transpile(tree, source, (device, bufs, n))
+        source_str = transpile(tree, source, (device, bufs, s))
         if not isinstance(source_str, str):
             return source_str
         options = None
@@ -135,7 +129,7 @@ def metal(func):
 
         # Launch thread groups
         threads_per_group = Metal.MTLSizeMake(32, 1, 1)
-        num_threadgroups = Metal.MTLSizeMake((n + 31) // 32, 1, 1)
+        num_threadgroups = Metal.MTLSizeMake((s + 31) // 32, 1, 1)
         encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
 
         # Finalize and commit
