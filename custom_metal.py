@@ -3,9 +3,6 @@ import ast
 import Metal
 import numpy as np
 from Foundation import NSURL
-import ctypes
-import objc
-import struct
 
 def overwrite_buffer(device_buffer, np_array):
     # Get raw pointer to buffer contents
@@ -85,8 +82,8 @@ kernel void {func_name}(
         encoder.setBuffer_offset_atIndex_(buf, 0, i)
 
     # Run helper
-    threads_per_group = Metal.MTLSizeMake(32, 1, 1)
-    num_threadgroups = Metal.MTLSizeMake((n + 31) // 32, 1, 1)
+    threads_per_group = Metal.MTLSizeMake(256, 1, 1)
+    num_threadgroups = Metal.MTLSizeMake((n + 255) // 256, 1, 1)
     encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
 
     encoder.endEncoding()
@@ -115,7 +112,7 @@ kernel void {func_name}(
     encoder.setBuffer_offset_atIndex_(bufs[0], 0, 0)  # output
 
     # Launch with one threadgroup (for simplicity)
-    threads_per_group = Metal.MTLSizeMake(32, 1, 1)
+    threads_per_group = Metal.MTLSizeMake(256, 1, 1)
     num_threadgroups = Metal.MTLSizeMake(1, 1, 1)  # only 1 result
 
     encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
@@ -124,8 +121,9 @@ kernel void {func_name}(
     cmd_buf.waitUntilCompleted()
 
     count = num_threadgroups.width * num_threadgroups.height * num_threadgroups.depth
-    raw = bufs[0].contents()[:4 * count]
-    partials = np.frombuffer(b''.join(raw), dtype=np.float32)
+    ptr = bufs[0].contents().as_buffer(4 * count)
+    partials = np.frombuffer(ptr, dtype=np.float32)
+
     sum_val = float(np.sum(partials))
 
     return sum_val
@@ -180,17 +178,16 @@ kernel void {func_name}(
         encoder.setBuffer_offset_atIndex_(buf, 0, i)
 
     # Run helper
-    threads_per_group = Metal.MTLSizeMake(32, 1, 1)
-    num_threadgroups = Metal.MTLSizeMake((n + 31) // 32, 1, 1)
+    threads_per_group = Metal.MTLSizeMake(256, 1, 1)
+    num_threadgroups = Metal.MTLSizeMake((n + 255) // 256, 1, 1)
     encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
 
     encoder.endEncoding()
     cmd_buf.commit()
     cmd_buf.waitUntilCompleted()
     count = left_node.inferred_type[1] * left_node.inferred_type[2]
-    raw = bufs[0].contents()[:4 * count]
-    leftMat = np.frombuffer(b''.join(raw), dtype=np.float32)
-    # leftMat = leftMat.reshape((left_node.inferred_type[1], left_node.inferred_type[2]))
+    ptr = bufs[0].contents().as_buffer(4 * count)
+    leftMat = np.frombuffer(ptr, dtype=np.float32)
     
 
     decls = []
@@ -232,17 +229,16 @@ kernel void {func_name}(
         encoder.setBuffer_offset_atIndex_(buf, 0, i)
 
     # Run helper
-    threads_per_group = Metal.MTLSizeMake(32, 1, 1)
-    num_threadgroups = Metal.MTLSizeMake((n + 31) // 32, 1, 1)
+    threads_per_group = Metal.MTLSizeMake(256, 1, 1)
+    num_threadgroups = Metal.MTLSizeMake((n + 255) // 256, 1, 1)
     encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
 
     encoder.endEncoding()
     cmd_buf.commit()
     cmd_buf.waitUntilCompleted()
     count = right_node.inferred_type[1] * right_node.inferred_type[2]
-    raw = bufs[0].contents()[:4 * count]
-    rightMat = np.frombuffer(b''.join(raw), dtype=np.float32)
-    # rightMat = rightMat.reshape((right_node.inferred_type[1], right_node.inferred_type[2]))
+    ptr = bufs[0].contents().as_buffer(4 * count)
+    rightMat = np.frombuffer(ptr, dtype=np.float32)
 
     # Now we load the two matrices into tempA and tempB
     # Load the metallib
@@ -276,18 +272,12 @@ kernel void {func_name}(
     encoder.setBuffer_offset_atIndex_(bufs[0], 0, 0)  # output
 
     # Launch with one threadgroup (for simplicity)
-    threads_per_group = Metal.MTLSizeMake(8, 8, 1)
-    num_threadgroups = Metal.MTLSizeMake((dims[1] + 7) // 8, (dims[0] + 7) // 8, 1)  # only 1 result
+    width = 16
+    threads_per_group = Metal.MTLSizeMake(width, width, 1)
+    num_threadgroups = Metal.MTLSizeMake((dims[1] + width - 1) // width, (dims[0] + width - 1) // width, 1)  # only 1 result
 
     encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
     encoder.endEncoding()
     cmd_buf.commit()
     cmd_buf.waitUntilCompleted()
-
-    # raw = bufs[0].contents()[:4*9]
-    # data_bytes = b''.join(raw)  # Flatten to a single bytes object
-    # result = np.frombuffer(data_bytes, dtype=np.float32)
-    # result = result.reshape(3,3)
-    # print(result)    
-
     return "out"

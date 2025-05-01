@@ -144,9 +144,8 @@ def metal(func):
         cmd_buf.waitUntilCompleted()
 
         # Access the raw memory from the Metal buffer
-        raw = bufs[0].contents()[:4*s]
-        data_bytes = b''.join(raw)  # Flatten to a single bytes object
-        result = np.frombuffer(data_bytes, dtype=np.float32)
+        ptr = bufs[0].contents().as_buffer(4 * s)
+        result = np.frombuffer(ptr, dtype=np.float32)
         if output_type == 'scalar':
             result = result[0]
         elif output_type[0] == 'array':

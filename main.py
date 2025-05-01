@@ -5,6 +5,7 @@ import numpy as np
 def matmul(a, b):
     return a @ b
 
-a = np.array([[1.0, 2.0, 6.0]], dtype=np.float32)
-b = np.array([[3.0], [4.0], [7.0]], dtype=np.float32)
-print(matmul(a, b))
+A = np.random.rand(4096, 4096).astype(np.float32)
+B = np.random.rand(4096, 4096).astype(np.float32)
+
+matmul(A, B)
