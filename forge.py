@@ -77,7 +77,7 @@ def metal(func):
         device = Metal.MTLCreateSystemDefaultDevice()
 
         # what size should temp bufferes and in-body variables be?
-        np_inputs = [np.empty(s), np.empty_like(args[0].ravel()), np.empty_like(args[0].ravel())]
+        np_inputs = []
         # Running assumption that function args are arrays or matrices
         for i in range(len(func_args)):
             np_inputs.append(args[i].ravel())
@@ -86,26 +86,25 @@ def metal(func):
                 np_inputs.append(np.empty_like(args[0]))
 
         # Allocate Metal buffers
-        mv0 = memoryview(np_inputs[0])
-        mv1 = memoryview(np_inputs[1])
-        mv2 = memoryview(np_inputs[2])
-        bufs = [device.newBufferWithBytes_length_options_(mv0, mv0.nbytes, Metal.MTLResourceStorageModeShared), 
-                device.newBufferWithBytes_length_options_(mv1, mv1.nbytes, Metal.MTLResourceStorageModeShared),
-                device.newBufferWithBytes_length_options_(mv2, mv2.nbytes, Metal.MTLResourceStorageModeShared)]
+        bufs = [
+            device.newBufferWithLength_options_(np_inputs[0].size * 4, Metal.MTLResourceStorageModeShared),
+            device.newBufferWithLength_options_(args[0].size * 4, Metal.MTLResourceStorageModeShared),
+            device.newBufferWithLength_options_(args[0].size * 4, Metal.MTLResourceStorageModeShared)
+        ]
         dims = []
         for arg in func_args:
             # Running assumption that function args are arrays or matrices
             dims = dims + list(arg_types[arg][1:])
         bufs.append(device.newBufferWithBytes_length_options_(np.array(dims, dtype=np.uint32), len(dims) * 4, Metal.MTLResourceStorageModeShared))
         for i in range(len(func_args)):
-            mv = memoryview(np_inputs[i+3])
+            mv = memoryview(np_inputs[i])
             bufs.append(device.newBufferWithBytes_length_options_(mv, mv.nbytes, Metal.MTLResourceStorageModeShared))
         for i in range(len(metal_args)):
             if metal_args[i] not in func_args:
-                mv = memoryview(np_inputs[i+3])
-                bufs.append(device.newBufferWithBytes_length_options_(mv, mv.nbytes, Metal.MTLResourceStorageModeShared))
+                bufs.append(device.newBufferWithLength_options_(np_inputs[i].size * 4, Metal.MTLResourceStorageModeShared))
 
-        source_str = transpile(tree, source, (device, bufs, s))
+        cmd_queue = device.newCommandQueue()
+        source_str = transpile(tree, source, (device, bufs, s, cmd_queue))
         if not isinstance(source_str, str):
             return source_str
         options = None
@@ -117,8 +116,7 @@ def metal(func):
         # Create pipeline
         pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
-        # Create command queue + buffer
-        cmd_queue = device.newCommandQueue()
+        # Create command buffer + encoder
         cmd_buf = cmd_queue.commandBuffer()
         encoder = cmd_buf.computeCommandEncoder()
 
@@ -128,8 +126,15 @@ def metal(func):
             encoder.setBuffer_offset_atIndex_(buf, 0, i)
 
         # Launch thread groups
-        threads_per_group = Metal.MTLSizeMake(32, 1, 1)
-        num_threadgroups = Metal.MTLSizeMake((s + 31) // 32, 1, 1)
+        if output_type == 'scalar':
+            threads_per_group = Metal.MTLSizeMake(32, 1, 1)
+            num_threadgroups = Metal.MTLSizeMake((s + 31) // 32, 1, 1)
+        elif output_type[0] == 'array':
+            threads_per_group = Metal.MTLSizeMake(256, 1, 1)
+            num_threadgroups = Metal.MTLSizeMake((s + 255) // 256, 1, 1)
+        elif output_type[0] == 'matrix':
+            threads_per_group = Metal.MTLSizeMake(16, 16, 1)
+            num_threadgroups = Metal.MTLSizeMake((output_type[1]+15)//16, (output_type[2]+15)//16, 1)
         encoder.dispatchThreadgroups_threadsPerThreadgroup_(num_threadgroups, threads_per_group)
 
         # Finalize and commit

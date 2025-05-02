@@ -39,7 +39,7 @@ class ReplaceMatMults(ast.NodeTransformer):
 
 # can do buffer 0 as output, 1 and 2 as temps
 def metal_sum(node, buffer_lookup, runtime_items):
-    device, bufs, n = runtime_items
+    device, bufs, n, cmd_queue = runtime_items
     func_name = "metal_sum_setup"
     decls = []
     transformer = ReplaceSums(metal_sum, buffer_lookup, runtime_items)
@@ -73,7 +73,6 @@ kernel void {func_name}(
     pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
     # Setup and dispatch
-    cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
     encoder = cmd_buf.computeCommandEncoder()
 
@@ -102,7 +101,6 @@ kernel void {func_name}(
     pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
     # Create new command buffer + encoder
-    cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
     encoder = cmd_buf.computeCommandEncoder()
 
@@ -130,7 +128,7 @@ kernel void {func_name}(
 
 def metal_matmult(node, buffer_lookup, runtime_items):
     # return a string, which is the buffer name of output
-    device, bufs, n = runtime_items
+    device, bufs, n, cmd_queue = runtime_items
     func_name = "metal_matmult_setup"
     transformer = ReplaceMatMults(metal_sum, buffer_lookup, runtime_items)
     left_node = transformer.visit(node.left)
@@ -169,7 +167,6 @@ kernel void {func_name}(
     pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
     # Setup and dispatch
-    cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
     encoder = cmd_buf.computeCommandEncoder()
 
@@ -188,7 +185,6 @@ kernel void {func_name}(
     count = left_node.inferred_type[1] * left_node.inferred_type[2]
     ptr = bufs[0].contents().as_buffer(4 * count)
     leftMat = np.frombuffer(ptr, dtype=np.float32).copy()       # Make a copy to avoid overwriting
-    
 
     decls = []
     for N in ast.walk(right_node):
@@ -220,7 +216,6 @@ kernel void {func_name}(
     pipeline_state, _ = device.newComputePipelineStateWithFunction_error_(fn, None)
 
     # Setup and dispatch
-    cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
     encoder = cmd_buf.computeCommandEncoder()
 
@@ -259,9 +254,7 @@ kernel void {func_name}(
     device, False, False, dims[0], dims[2], dims[1], 1.0, 0.0)
 
     # Create new command buffer + encoder
-    cmd_queue = device.newCommandQueue()
     cmd_buf = cmd_queue.commandBuffer()
     gemm.encodeToCommandBuffer_leftMatrix_rightMatrix_resultMatrix_(cmd_buf, matA, matB, matC)
     cmd_buf.commit()
-    cmd_buf.waitUntilCompleted()
     return "out"
