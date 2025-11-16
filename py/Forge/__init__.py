@@ -1,5 +1,6 @@
 from .forge import forge
 from .array import Array
+from . import ops
 from . import _backend
 
 # package version

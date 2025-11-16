@@ -8,6 +8,7 @@ pybind11_add_module(
     _backend 
     cpp/src/bindings.cpp
     cpp/src/array_handle.cpp
+    cpp/src/array_add.cpp
     cpp/src/compiler.cpp
     cpp/src/runtime.cpp
 )

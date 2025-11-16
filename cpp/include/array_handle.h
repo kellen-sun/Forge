@@ -15,7 +15,7 @@ private:
 public:
     // CONSTRUCTORS //
     ArrayHandle() = default;
-    ArrayHandle(std::vector<float>&& data, std::vector<int64_t>&& shape)
+    ArrayHandle(std::vector<float> data, std::vector<int64_t> shape)
      : data_{std::move(data)}, shape_{std::move(shape)} {}
     
     // ACCESSORS //
