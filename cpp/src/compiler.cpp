@@ -1,5 +1,5 @@
 #include "../include/forge_handle.h"
-#include "../include/frontend.h"
+#include "../include/compiler.h"
 #include <string>
 
 std::unique_ptr<ForgeHandle> compile_from_source_cpp(const std::string& src) {

@@ -24,3 +24,8 @@ cd build
 cmake ..
 cmake --build .
 ```
+
+setup the Forge library itself (from project root run):
+```
+pip install -e .
+```

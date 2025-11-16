@@ -1,7 +1,7 @@
 from forge import *
 import numpy as np
 import time
-@metal
+@forge
 def matmul(a, b):
     return a @ b
 

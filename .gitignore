@@ -1,3 +1,5 @@
-/__pycache__/*
-/build/*
+/__pycache__*
+/build*
 *.log
+*.egg-info/
+*.vscode/
