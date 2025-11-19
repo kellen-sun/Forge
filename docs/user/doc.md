@@ -29,3 +29,8 @@ setup the Forge library itself (from project root run):
 ```
 pip install -e .
 ```
+
+to run tests
+```
+pip install pytest
+```
