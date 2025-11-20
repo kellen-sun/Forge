@@ -84,7 +84,7 @@ class Array:
     
     @classmethod
     def from_buffer(cls, buf, shape: Sequence[int]):
-        """Construct Array from memoryview/bytes/array('f') with explicit shape"""
+        """Construct Array from memoryview/array('f') with explicit shape"""
         mv = memoryview(buf)
         inst = cls.__new__(cls)
         inst._handle = _backend.create_array_from_buffer(mv, list(shape))

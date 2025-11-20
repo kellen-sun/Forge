@@ -1,10 +1,9 @@
 import pytest
 from array import array as pyarray
 from Forge import Array
+import numpy as np
 
-#
 # --- BASIC SHAPE + CREATION ---
-#
 
 def test_shape_basic():
     a = Array([[1, 2, 3], [4, 5, 6]])
@@ -34,12 +33,10 @@ def test_ragged_2d():
 
 def test_ragged_deep():
     with pytest.raises(ValueError):
-        Array([[1, 2], [3, [4]]])  # inner nesting mismatch
+        Array([[1, 2], [3, [4]]])
 
 
-#
 # --- TYPE HANDLING ---
-#
 
 def test_array_module_float_array():
     arr = pyarray("f", [1.0, 2.0, 3.0])
@@ -56,10 +53,17 @@ def test_bytes_without_shape_fails():
     with pytest.raises(TypeError):
         Array(b'\x00\x01')
 
+def test_bytes_with_shape():
+    a = Array.from_buffer(np.array([1,2,3], dtype=np.float32), shape=(3,))
+    assert a.shape == (3,)
+    assert a.list() == [1.0, 2.0, 3.0]
 
-#
+def test_bytes_with_shape_fail():
+    with pytest.raises(TypeError):
+        Array(b'\x00\x00\x00\x01', shape=(2,3))
+
+
 # --- ADDITION ---
-#
 
 def test_addition_correct():
     a1 = Array([[1.0, 2.0], [3.0, 4.0]])
@@ -85,9 +89,8 @@ def test_add_non_array():
     with pytest.raises(TypeError):
         _ = a + 5
 
-#
+
 # --- from_buffer + from_handle ---
-#
 
 def test_from_buffer():
     arr = pyarray("f", [1.0, 2.0, 3.0, 4.0])
@@ -97,19 +100,14 @@ def test_from_buffer():
     assert a.list() == [[1.0, 2.0], [3.0, 4.0]]
 
 def test_from_handle_roundtrip():
-    # create a simple array
     a = Array([[1, 2], [3, 4]])
-    # pull handle
     h = a._handle
-    # make new array from handle
     b = Array.from_handle(h)
     assert b.shape == (2, 2)
     assert b.list() == [[1, 2], [3, 4]]
 
 
-#
 # --- DEEP NESTING ---
-#
 
 def test_3d_shape():
     a = Array([
@@ -123,9 +121,7 @@ def test_4d_shape():
     assert a.shape == (2, 2, 1, 1)
 
 
-#
 # --- EDGE CASES / SANITY ---
-#
 
 def test_zero_dim_addition():
     a = Array(3.0)
