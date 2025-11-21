@@ -27,7 +27,10 @@ PYBIND11_MODULE(_backend, m) {
             "data",
             [](const ArrayHandle& a) { return a.data(); }
         );
-    m.def("create_array_from_buffer", &create_array_from_buffer_py, py::arg("buf"), py::arg("shape"));
+    m.def("create_array_from_buffer",       [](py::buffer buf, std::vector<int64_t> shape) {
+          return create_array_from_buffer_py(buf, shape, /*FH=*/nullptr);
+      },
+      py::arg("buf"), py::arg("shape"));
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
 
@@ -35,6 +38,6 @@ PYBIND11_MODULE(_backend, m) {
     m.def("add_arrays", &add_arrays_cpp, py::arg("a"), py::arg("b"));
     
     // COMPILE AND RUN //
-    m.def("compile_from_source", &compile_from_source_cpp);
-    m.def("run_kernel", &run_kernel_cpp);
+    // m.def("compile_from_source", &compile_from_source_cpp);
+    // m.def("run_kernel", &run_kernel_cpp);
 }
