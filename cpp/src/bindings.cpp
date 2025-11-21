@@ -27,7 +27,7 @@ PYBIND11_MODULE(_backend, m) {
             "data",
             [](const ArrayHandle& a) { return a.data(); }
         );
-    m.def("create_array_from_buffer",       [](py::buffer buf, std::vector<int64_t> shape) {
+    m.def("create_array_from_buffer", [](py::buffer buf, std::vector<int64_t> shape) {
           return create_array_from_buffer_py(buf, shape, /*FH=*/nullptr);
       },
       py::arg("buf"), py::arg("shape"));

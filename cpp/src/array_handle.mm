@@ -3,6 +3,7 @@
 #include "../include/array_handle.h"
 #include "../include/forge_handle.h"
 
+
 ArrayHandle::ArrayHandle(std::vector<float> data, std::vector<int64_t> shape, void* dev)
  : data_{std::move(data)}, shape_{std::move(shape)} 
 {
@@ -15,7 +16,6 @@ ArrayHandle::ArrayHandle(std::vector<float> data, std::vector<int64_t> shape, vo
 
     metal_buffer_ = (__bridge_retained void*)buf;
 }
-
 
 ArrayHandle::~ArrayHandle() {
     if (metal_buffer_) {
@@ -33,22 +33,19 @@ static size_t numel_from_shape(const std::vector<int64_t>& shape) {
 
 std::vector<float>& ArrayHandle::download() {
     size_t n = numel_from_shape(shape_);
+    if (data_.size() != n) throw std::runtime_error("ArrayHandle::download: buffer length doesn't match given shape");
     if (!metal_buffer_) {
-        if (shape_.size() && data_.size() != n)
-            data_.resize(n);
+        // TODO: Raise a silent warning for not having a metal_buffer_ that can be disabled
         return data_;
     }
     id<MTLBuffer> buf = (__bridge id<MTLBuffer>) metal_buffer_;
-    if (data_.size() != n) throw std::runtime_error("ArrayHandle::download: buffer length doesn't match given shape");
     void* src = [buf contents];
     if (src == nullptr) {
         throw std::runtime_error("ArrayHandle::download: buffer contents() null");
     }
 
     memcpy(data_.data(), src, n * sizeof(float));
-
     return data_;
-
 }
 
 const std::vector<float>& ArrayHandle::download() const {
@@ -73,16 +70,16 @@ std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::ve
     float* src_ptr = static_cast<float*>(info.ptr);
     std::vector<float> data(src_ptr, src_ptr+info.size);
 
-    id<MTLDevice> dev;
-    if (!FH) dev = (__bridge id<MTLDevice>) get_default_forge()->device_ptr();
-    else dev = (__bridge id<MTLDevice>) FH->device_ptr();
-    void* dev_opaque = (__bridge void*) dev;
+    void* dev;
+    if (!FH) dev = get_default_forge()->device_ptr();
+    else dev = FH->device_ptr();
     return std::make_shared<ArrayHandle>(std::move(data), 
-        std::vector<int64_t>(shape.begin(), shape.end()), dev_opaque);
+        std::vector<int64_t>(shape.begin(), shape.end()), dev);
 }
 
 py::object array_to_list(const std::shared_ptr<ArrayHandle>& h) {
     const auto& shape = h->shape();
+    // TODO: Should we always download here?
     const auto& data = h->download();
     if (shape.empty()) {
         return py::float_(data.size() ? data[0] : 0.0);

@@ -23,6 +23,10 @@ def test_empty_array_top_level():
     assert arr.shape == (0,)
     assert arr.list() == []
 
+def test_wrong_shape_call():
+    with pytest.raises(TypeError):
+        Array([[1, 2], [1, 2]]).shape()
+
 def test_empty_nested_list():
     with pytest.raises(ValueError):
         Array([[1, 2], []])

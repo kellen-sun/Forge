@@ -64,5 +64,4 @@ kernel void add_arrays(
     [cmd waitUntilCompleted];
 
     return out;
-
 }
