@@ -10,4 +10,4 @@ namespace py = pybind11;
 std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::vector<int64_t> shape,
     ForgeHandle* FH);
 
-py::object array_to_list(const std::shared_ptr<ArrayHandle>& h);
+py::object array_to_list(const ArrayHandle& h);

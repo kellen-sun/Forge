@@ -24,9 +24,9 @@ std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::ve
     return handle;
 }
 
-py::object array_to_list(const std::shared_ptr<ArrayHandle>& h) {
-    const auto& shape = h->shape();
-    const auto& data = h->data();
+py::object array_to_list(const ArrayHandle& h) {
+    const auto& shape = h.shape();
+    const auto& data = h.data();
     if (shape.empty()) {
         return py::float_(data.size() ? data[0] : 0.0);
     }
