@@ -39,9 +39,8 @@ kernel void add_arrays(
 
     // allocate output ArrayHandle
     auto out = std::make_shared<ArrayHandle>(
-        std::vector<float>(A->data().size(), 0.0f),
         A->shape(),
-        get_default_forge()->device_ptr()
+        defaultForgeHandle->device_ptr()
     );
     
     id<MTLBuffer> bufA = (__bridge id<MTLBuffer>) A->metal_buffer();

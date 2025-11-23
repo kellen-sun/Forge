@@ -6,6 +6,7 @@
 #include "../include/array_add.h"
 #include "../include/runtime.h"
 #include "../include/compiler.h"
+#include "../include/bindings.h"
 
 namespace py = pybind11;
 
