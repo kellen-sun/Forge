@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(forge_backend LANGUAGES C CXX OBJC OBJCXX)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OBJCXX_STANDARD 17)
+set(CMAKE_OBJCXX_STANDARD 20)
 set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
@@ -11,6 +11,7 @@ find_package(pybind11 REQUIRED)
 pybind11_add_module(
     _backend 
     cpp/src/bindings.cpp
+    cpp/src/bindings_impl.cpp
     cpp/src/array_handle.mm
     cpp/src/array_add.mm
     cpp/src/forge_handle.mm
