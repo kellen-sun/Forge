@@ -10,6 +10,7 @@ class ArrayHandle {
 private:
     std::vector<int64_t> shape_;
     void* metal_buffer_ = nullptr;
+    void* write_event_ = nullptr;
 public:
     // CONSTRUCTORS //
     ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr);
@@ -24,6 +25,9 @@ public:
 
     // SETTER //
     void set_metal_buffer(void* buf) { metal_buffer_ = buf; }
+    void set_event(void* event);
+
+    void synchronize();
 };
 
 inline std::shared_ptr<ForgeHandle> get_default_forge() {

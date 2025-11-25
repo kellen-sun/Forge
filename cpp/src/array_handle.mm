@@ -42,6 +42,10 @@ ArrayHandle::~ArrayHandle() {
         CFRelease(metal_buffer_);
         metal_buffer_ = nullptr;
     }
+    if (write_event_) {
+        CFRelease(write_event_);
+        write_event_ = nullptr;
+    }
 }
 
 std::span<float> ArrayHandle::data() {
@@ -58,6 +62,21 @@ std::span<float> ArrayHandle::data() {
 
 std::span<const float> ArrayHandle::data() const {
     return const_cast<ArrayHandle*>(this)->data();
+}
+
+void ArrayHandle::set_event(void* event) {
+    if (write_event_ == event) return;
+    if (write_event_) CFRelease(write_event_);
+    if (event) write_event_ = (void*)CFRetain(event);
+    else write_event_ = nullptr;
+}
+
+void ArrayHandle::synchronize() {
+    if (!write_event_) return;
+    id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)write_event_;
+    [cmd waitUntilCompleted];
+    CFRelease(write_event_);
+    write_event_ = nullptr;
 }
 
 std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h) {
