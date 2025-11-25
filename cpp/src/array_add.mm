@@ -48,7 +48,11 @@ kernel void add_arrays(
     id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>) out->metal_buffer();
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
+    if (!cmd)
+        throw std::runtime_error("Metal Error: Failed to create command buffer. GPU might out of memory.");
     id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    if (!enc)
+        throw std::runtime_error("Metal Error: Failed to create command encoder.");
     [enc setComputePipelineState:pipeline];
     [enc setBuffer:bufA offset:0 atIndex:0];
     [enc setBuffer:bufB offset:0 atIndex:1];
@@ -60,7 +64,7 @@ kernel void add_arrays(
     [enc endEncoding];
 
     [cmd commit];
-    [cmd waitUntilCompleted];
+    out->set_event((__bridge void*)cmd);
 
     return out;
 }
