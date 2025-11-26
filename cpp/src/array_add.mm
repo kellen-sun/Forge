@@ -28,43 +28,12 @@ std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     // compile pipeline on first call
     static id<MTLComputePipelineState> pipeline = nil;
     if (!pipeline) {
-        NSString* source = @R"(#include <metal_stdlib>
-using namespace metal;
-
-kernel void add_arrays(
-    const device float* A       [[ buffer(0) ]],
-    const device float* B       [[ buffer(1) ]],
-    device float* Out           [[ buffer(2) ]],
-    constant int& op_type       [[ buffer(3) ]],
-    uint gid                    [[ thread_position_in_grid ]]
-)
-{
-    float result;
-
-    switch (op_type) { 
-        case 0:
-            result = A[gid] + B[gid];
-            break;
-        case 1:
-            result = A[gid] - B[gid];
-            break;
-        case 2:
-            result = A[gid] * B[gid];
-            break;
-        case 3:
-            result = A[gid] / B[gid];
-            break;
-        default:
-            result = A[gid] + B[gid];
-            break;
-    }
-
-    Out[gid] = result;
-    
-}
-)";
+        NSString* source = loadMetalSource("elementwise.metal");
+        if (!source ){
+            throw std::runtime_error("Failed to load Metal source file.")
+        }
         id<MTLLibrary> lib = [device newLibraryWithSource:source options:nil error:nil];
-        id<MTLFunction> fn = [lib newFunctionWithName:@"add_arrays"];
+        id<MTLFunction> fn = [lib newFunctionWithName:@"operations_arrays"];
         pipeline = [device newComputePipelineStateWithFunction:fn error:nil];
     }
 
