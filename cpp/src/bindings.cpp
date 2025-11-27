@@ -35,8 +35,19 @@ PYBIND11_MODULE(_backend, m) {
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
 
+    // ENUM //
+    py::enum_<ArrayOperationType>(m, "ArrayOperationType")
+        .value("ADD", ArrayOperationType::ADD)
+        .value("SUB", ArrayOperationType::SUB)
+        .value("MULT", ArrayOperationType::MULT)
+        .value("DIV", ArrayOperationType::DIV)
+        .export_values();
+
     // OPERATIONS //
-    m.def("add_arrays", &add_arrays_cpp, py::arg("a"), py::arg("b"));
+    m.def("operations_arrays", &operations_arrays_cpp, 
+          py::arg("a"), 
+          py::arg("b"), 
+          py::arg("op_type"));
     
     // COMPILE AND RUN //
     // m.def("compile_from_source", &compile_from_source_cpp);
