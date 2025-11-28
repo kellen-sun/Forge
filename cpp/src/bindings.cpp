@@ -3,7 +3,7 @@
 
 #include "../include/forge_handle.h"
 #include "../include/array_handle.h"
-#include "../include/array_add.h"
+#include "../include/array_binops.h"
 #include "../include/runtime.h"
 #include "../include/compiler.h"
 #include "../include/bindings.h"
