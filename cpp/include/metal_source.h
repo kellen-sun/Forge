@@ -14,26 +14,39 @@ kernel void operations_arrays(
     uint gid                    [[ thread_position_in_grid ]]
 )
 {
-    float result;
+    float a = A[gid];
+    float b = B[gid];
+    float result = 0.0f; // Initialize result to zero
 
-    switch (op_type) { 
-        case 0: // ADD
-            result = A[gid] + B[gid];
-            break;
-        case 1: // SUBTRACTION
-            result = A[gid] - B[gid];
-            break;
-        case 2: // MULTIPLICATION
-            result = A[gid] * B[gid];
-            break;
-        case 3: // DIVISION
-            result = A[gid] / B[gid];
-            break;
-        default:
-            result = A[gid] + B[gid];
-            break;
-    }
+    // --- Branchless Operation Selection using Masking ---
+    
+    // Create a mask (1.0f or 0.0f) for each operation type
+    // The select function chooses between the second argument (1.0f) and the third argument (0.0f)
+    // based on the boolean condition (op_type == N).
 
+    // Mask for ADD (0)
+    float mask_add = select(0.0f, 1.0f, op_type == 0); 
+    result += mask_add * (a + b);
+
+    // Mask for SUB (1)
+    float mask_sub = select(0.0f, 1.0f, op_type == 1);
+    result += mask_sub * (a - b);
+
+    // Mask for MULT (2)
+    float mask_mult = select(0.0f, 1.0f, op_type == 2);
+    result += mask_mult * (a * b);
+
+    // Mask for DIV (3)
+    float mask_div = select(0.0f, 1.0f, op_type == 3);
+    result += mask_div * (a / b);
+    
+    // --- Default/Error Handling ---
+    // Since the C++ side ensures op_type is 0-3, the 'default' case is less critical.
+    // If op_type is invalid (e.g., 99), all masks will be 0.0f, and result remains 0.0f.
+    // If you strictly need to handle default, you would add an explicit mask for 
+    // when NO other mask is 1.0f, but for performance, we rely on the host being correct.
+    
+    // --- Output ---
     Out[gid] = result;
 }
 )";
