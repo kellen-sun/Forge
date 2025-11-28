@@ -1,6 +1,7 @@
 #import <Metal/Metal.h>
 
 #include "../include/array_binops.h"
+#include "../include/metal_source.h"
 
 std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     const std::shared_ptr<ArrayHandle>& A, 
@@ -21,14 +22,9 @@ std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     // compile pipeline on first call
     static id<MTLComputePipelineState> pipeline = nil;
     if (!pipeline) {
-        NSString* relativePath = @"../../metal/elementwise.metal";
-        NSError* error = nil;
-        NSString* source = [NSString stringWithContentsOfFile:relativePath 
-                                                   encoding:NSUTF8StringEncoding 
-                                                      error:&error];
-        if (error){
-            throw std::runtime_error("Failed to load Metal source file.");
-        };
+        const char* metal_c_string = ELEMENTWISE_METAL_SOURCE;
+        NSString* source = [NSString stringWithUTF8String:metal_c_string];
+
         id<MTLLibrary> lib = [device newLibraryWithSource:source options:nil error:nil];
         id<MTLFunction> fn = [lib newFunctionWithName:@"operations_arrays"];
         pipeline = [device newComputePipelineStateWithFunction:fn error:nil];
