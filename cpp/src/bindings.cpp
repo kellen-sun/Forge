@@ -35,19 +35,15 @@ PYBIND11_MODULE(_backend, m) {
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
 
-    // ENUM //
-    py::enum_<ArrayOperationType>(m, "ArrayOperationType")
-        .value("ADD", ArrayOperationType::ADD)
-        .value("SUB", ArrayOperationType::SUB)
-        .value("MULT", ArrayOperationType::MULT)
-        .value("DIV", ArrayOperationType::DIV)
-        .export_values();
-
     // OPERATIONS //
-    m.def("operations_arrays", &operations_arrays_cpp, 
-          py::arg("a"), 
-          py::arg("b"), 
-          py::arg("op_type"));
+    m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b)
+     { return binops_arrays_cpp(a, b, "add"); });
+    m.def("sub", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b)
+     { return binops_arrays_cpp(a, b, "sub"); });
+    m.def("mul", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b)
+     { return binops_arrays_cpp(a, b, "mul"); });
+    m.def("div", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b)
+     { return binops_arrays_cpp(a, b, "div"); });
     
     // COMPILE AND RUN //
     // m.def("compile_from_source", &compile_from_source_cpp);

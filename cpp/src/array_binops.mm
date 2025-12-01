@@ -3,10 +3,44 @@
 #include "../include/array_binops.h"
 #include "../include/metal_source.h"
 
-std::shared_ptr<ArrayHandle> operations_arrays_cpp(
+static id<MTLComputePipelineState> get_pipeline(const std::string& op_name) {
+    static std::map<std::string, id<MTLComputePipelineState>> cache;
+    static id<MTLLibrary> library = nil;
+    auto defaultForgeHandle = get_default_forge();
+    id<MTLDevice> device =  (__bridge id<MTLDevice>) defaultForgeHandle->device_ptr();
+
+    if (!library) {
+        const char* metal_c_string = ELEMENTWISE_METAL_SOURCE;
+        NSString* source = [NSString stringWithUTF8String:metal_c_string];
+        NSError* err = nil;
+        library = [device newLibraryWithSource:source options:nil error:&err];
+        if (!library) {
+            NSLog(@"Library compilation failed: %@", [err localizedDescription]);
+            throw std::runtime_error("Metal Error: Failed to compile Metal.");
+        }
+    }
+
+    if (cache.find(op_name) != cache.end()) {
+        return cache[op_name];
+    }
+    NSString* nameNS = [NSString stringWithUTF8String:op_name.c_str()];
+    id<MTLFunction> fn = [library newFunctionWithName:nameNS];
+    if (!fn) {
+        throw std::runtime_error("get_pipeline: Failed to find function '" + op_name + "' in library");
+    }
+    id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:fn error:nil];
+    
+    if (!pipeline) {
+        throw std::runtime_error("Metal Error: Failed to create pipeline state for " + op_name);
+    }
+    cache[op_name] = pipeline;
+    return pipeline;
+}
+
+std::shared_ptr<ArrayHandle> binops_arrays_cpp(
     const std::shared_ptr<ArrayHandle>& A, 
     const std::shared_ptr<ArrayHandle>& B,
-    ArrayOperationType op_type) //parameter for operation type
+    const std::string& op_name)
 {
     const auto& shapeA = A->shape();
     const auto& shapeB = B->shape();
@@ -20,15 +54,7 @@ std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     id<MTLCommandQueue> queue =  (__bridge id<MTLCommandQueue>) defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
-    static id<MTLComputePipelineState> pipeline = nil;
-    if (!pipeline) {
-        const char* metal_c_string = ELEMENTWISE_METAL_SOURCE;
-        NSString* source = [NSString stringWithUTF8String:metal_c_string];
-
-        id<MTLLibrary> lib = [device newLibraryWithSource:source options:nil error:nil];
-        id<MTLFunction> fn = [lib newFunctionWithName:@"operations_arrays"];
-        pipeline = [device newComputePipelineStateWithFunction:fn error:nil];
-    }
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name);
 
     // allocate output ArrayHandle
     auto out = std::make_shared<ArrayHandle>(
@@ -40,12 +66,6 @@ std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>) B->metal_buffer();
     id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>) out->metal_buffer();
 
-    const int op_code = static_cast<int>(op_type);
-
-    id<MTLBuffer> op_type_buffer = [device newBufferWithBytes:&op_code
-                                        length: sizeof(int) 
-                                        options:MTLResourceStorageModeManaged];
-
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd)
         throw std::runtime_error("Metal Error: Failed to create command buffer. GPU might out of memory.");
@@ -56,7 +76,6 @@ std::shared_ptr<ArrayHandle> operations_arrays_cpp(
     [enc setBuffer:bufA offset:0 atIndex:0];
     [enc setBuffer:bufB offset:0 atIndex:1];
     [enc setBuffer:bufOut offset:0 atIndex:2];
-    [enc setBuffer:op_type_buffer offset:0 atIndex:3];
 
     MTLSize grid = MTLSizeMake(A->data().size(), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
