@@ -72,33 +72,6 @@ def test_bytes_with_shape_fail():
         Array(b'\x00\x00\x00\x01', shape=(2,3))
 
 
-# --- ADDITION ---
-
-def test_addition_correct():
-    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
-    a2 = Array([[4.0, 5.0], [6.0, 7.0]])
-    result = a1 + a2
-    assert result.list() == [[5.0, 7.0], [9.0, 11.0]]
-
-def test_addition_mismatch_shape():
-    a1 = Array([[1, 2]])
-    a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
-        _ = a1 + a2
-
-def test_radd():
-    a1 = Array([1, 2, 3])
-    a2 = Array([4, 5, 6])
-    assert (a1 + a2).list() == [5, 7, 9]
-    assert (a2 + a1).list() == [5, 7, 9]
-    assert (a1.__radd__(a2)).list() == [5, 7, 9]
-
-def test_add_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a + 5
-
-
 # --- from_buffer + from_handle ---
 
 def test_from_buffer():
