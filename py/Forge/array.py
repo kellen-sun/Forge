@@ -112,7 +112,10 @@ class Array:
         return _backend.array_to_list(self._handle)
     
     def __repr__(self):
-        return f"Array(shape = {self.shape})"
+        return f"Array(shape = {self.shape}, type=float)\n" + str(self.list())
+    
+    def __str__(self):
+        return self.__repr__()
     
     def __len__(self):
         return self.shape[0]
