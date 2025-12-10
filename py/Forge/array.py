@@ -99,9 +99,66 @@ class Array:
         inst.shape = tuple(_backend.array_shape(handle))
         return inst
     
+    @property
+    def strides(self):
+        return self._handle.strides
+
+    @property
+    def offset(self):
+        return self._handle.offset
+    
     def list(self):
         """Return back a nested list form"""
         return _backend.array_to_list(self._handle)
     
     def __repr__(self):
         return f"Array(shape = {self.shape})"
+    
+    def __getitem__(self, key):
+        """
+        Handles slicing: a[1], a[1:5], a[::2]
+        Does NOT copy data. Returns a View.
+        """
+        if not isinstance(key, tuple):
+            key = (key,)
+
+        # 1. Start with current metadata
+        new_shape = list(self.shape)
+        new_strides = list(self.strides)
+        new_offset = self.offset
+
+        # 2. Iterate over dims
+        # (Simplified logic - assumes simple slicing for now)
+        dim = 0
+        for s in key:
+            if isinstance(s, int):
+                # Integer Index: Reduce dim
+                # Offset increases by index * stride
+                new_offset += s * new_strides[dim]
+                new_shape.pop(dim)
+                new_strides.pop(dim)
+                # Don't increment dim, as we popped it
+                
+            elif isinstance(s, slice):
+                # Slice: Adjust shape and stride
+                start, stop, step = s.indices(new_shape[dim])
+                
+                # Update Offset (start point)
+                new_offset += start * new_strides[dim]
+                
+                # Update Stride (step)
+                new_strides[dim] *= step
+                
+                # Update Shape (length)
+                new_shape[dim] = (stop - start + (step - 1)) // step
+                dim += 1
+                
+            else:
+                raise TypeError("Only int and slice supported")
+
+        # 3. Call C++ to create the view handle
+        
+        handle = _backend.make_view(self._handle, new_shape, new_strides, new_offset)
+        if len(new_shape) == 0:
+            return handle.item()
+        return Array(handle)

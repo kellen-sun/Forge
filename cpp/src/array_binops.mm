@@ -77,6 +77,19 @@ std::shared_ptr<ArrayHandle> binops_arrays_cpp(
     [enc setBuffer:bufB offset:0 atIndex:1];
     [enc setBuffer:bufOut offset:0 atIndex:2];
 
+    uint ndim = (uint)out->shape().size();
+
+[enc setBytes:out->shape().data() length:ndim*8             atIndex:3];
+size_t current_offsetA = A->offset();
+[enc setBytes:A->strides().data() length:ndim*8             atIndex:4];
+[enc setBytes:&current_offsetA    length:sizeof(size_t)     atIndex:5];
+
+size_t current_offsetB = B->offset();
+[enc setBytes:B->strides().data() length:ndim*8             atIndex:6];
+[enc setBytes:&current_offsetB    length:sizeof(size_t)     atIndex:7];
+
+[enc setBytes:&ndim               length:4                  atIndex:8];
+
     MTLSize grid = MTLSizeMake(A->data().size(), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];

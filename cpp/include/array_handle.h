@@ -9,16 +9,22 @@
 class ArrayHandle {
 private:
     std::vector<int64_t> shape_;
+    std::vector<int64_t> strides_;
+    size_t offset_;
     void* metal_buffer_ = nullptr;
     void* write_event_ = nullptr;
 public:
     // CONSTRUCTORS //
     ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr);
     ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev = nullptr);
+    ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape, 
+        std::vector<int64_t> new_strides, size_t new_offset);
     ~ArrayHandle();
 
     // ACCESSORS //
     const std::vector<int64_t>& shape() const { return shape_; }
+    const std::vector<int64_t>& strides() const { return strides_; }
+    size_t offset() const { return offset_; }
     std::span<const float> data() const;
     std::span<float> data();
     void* metal_buffer() const { return metal_buffer_; }
