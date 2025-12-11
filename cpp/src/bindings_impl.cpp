@@ -32,20 +32,20 @@ py::object array_to_list(const ArrayHandle& h) {
         return py::float_(data.size() ? data[0] : 0.0);
     }
 
-    std::function<py::object(size_t, size_t)> build = [&](size_t dim, size_t offset) -> py::object {
+    std::function<py::object(const std::vector<int64_t>&, size_t, size_t)> build = 
+      [&](const std::vector<int64_t>& strides, size_t dim, size_t offset) -> py::object {
+        int64_t stride = strides[dim];
         if (dim + 1 == shape.size()) {
             py::list lst;
             for (int64_t i = 0; i < shape[dim]; ++i) 
-                lst.append(py::float_(data[offset + i]));
+                lst.append(py::float_(data[offset + i * stride]));
             return lst;
         } else {
             py::list lst;
-            int64_t stride = 1;
-            for (size_t k = dim + 1; k < shape.size(); ++k) stride *= shape[k];
             for (int64_t i = 0; i < shape[dim]; ++i)
-                lst.append(build(dim + 1, offset + i * stride));
+                lst.append(build(strides, dim + 1, offset + i * stride));
             return lst;
         }
     };
-    return build(0, 0);
+    return build(h.strides(), 0, h.offset());
 }

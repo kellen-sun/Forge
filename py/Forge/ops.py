@@ -17,6 +17,8 @@ def _call_op(a: Array, b: Array, op_type: str) -> Array:
     return Array.from_handle(h)
 
 def array_add(self, other):
+    if other == 0:
+        return self
     if not isinstance(other, Array):
         return NotImplemented
     return _call_op(self, other, "add")

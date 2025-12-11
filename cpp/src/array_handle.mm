@@ -4,14 +4,25 @@
 #include "../include/forge_handle.h"
 
 
+static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
+    std::vector<int64_t> strides(shape.size());
+    int64_t stride = 1;
+    for (int i = (int)shape.size() - 1; i >= 0; i--) {
+        strides[i] = stride;
+        stride *= shape[i];
+    }
+    return strides;
+}
+
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
-    : shape_{std::move(shape)} 
+    : shape_{std::move(shape)}, offset_(0)
 {
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
     if (nbytes == 0) {
         metal_buffer_ = nullptr;
         return;
     }
+    strides_ = make_strides(shape_);
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes
@@ -21,13 +32,14 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
 }
 
 ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev)
-    : shape_{std::move(shape)} 
+    : shape_{std::move(shape)}, offset_(0)
 {
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
     if (nbytes == 0) {
         metal_buffer_ = nullptr;
         return;
     }
+    strides_ = make_strides(shape_);
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithBytes:src_data
@@ -35,6 +47,22 @@ ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void
                                            options:MTLResourceStorageModeShared];
 
     metal_buffer_ = (__bridge_retained void*)buf;
+}
+
+ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, 
+    std::vector<int64_t> new_shape,
+    std::vector<int64_t> new_strides,
+    size_t new_offset 
+    ) : shape_(std::move(new_shape)), 
+        strides_(std::move(new_strides)), 
+        offset_(new_offset)
+{
+    parent->synchronize();
+    metal_buffer_ = parent->metal_buffer();
+    if (metal_buffer_) {
+        CFRetain(metal_buffer_);
+    }
+    write_event_ = nullptr;
 }
 
 ArrayHandle::~ArrayHandle() {

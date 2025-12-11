@@ -99,9 +99,89 @@ class Array:
         inst.shape = tuple(_backend.array_shape(handle))
         return inst
     
+    @property
+    def strides(self):
+        return self._handle.strides
+
+    @property
+    def offset(self):
+        return self._handle.offset
+    
     def list(self):
         """Return back a nested list form"""
         return _backend.array_to_list(self._handle)
     
     def __repr__(self):
-        return f"Array(shape = {self.shape})"
+        return f"Array(shape = {self.shape}, type=float)\n" + str(self.list())
+    
+    def __str__(self):
+        return self.__repr__()
+    
+    def __len__(self):
+        return self.shape[0]
+    
+    def __getitem__(self, key):
+        """
+        Indexing and slicing, returns a new Array that refers to the same data. 
+        Unless Array[[idx]] is used which creates a copy of the memory.
+        Index by [3], [3,4], or negatives [-1] or slice [3:5].
+        """
+        if not isinstance(key, tuple):
+            key = (key,)
+
+        ellipsis_count = key.count(Ellipsis)
+        if ellipsis_count > 1:
+            raise IndexError("Array: only one ellipsis allowed in indexing")
+        if ellipsis_count == 1:
+            ellipsis_index = key.index(Ellipsis)
+            explicit_count = sum(1 for k in key if k is not Ellipsis and k is not None)
+            if len(self.shape) < explicit_count:
+                raise IndexError("Array: too many indices for array")
+            num_missing = len(self.shape) - explicit_count
+            key = key[:ellipsis_index] + (slice(None),) * num_missing + key[ellipsis_index + 1:]
+            key = tuple(key)
+
+        new_shape = list(self.shape)
+        new_strides = list(self.strides)
+        new_offset = self.offset
+
+        dim = 0
+        for s in key:
+            if s is None:
+                new_shape.insert(dim, 1)
+                new_strides.insert(dim, 0)
+
+            if isinstance(s, int):
+                if s < 0: s += self.shape[dim]
+                if s < 0 or s >= self.shape[dim]:
+                    raise IndexError("Array: Index out of range")
+
+                new_offset += s * new_strides[dim]
+                new_shape.pop(dim)
+                new_strides.pop(dim)
+                
+            elif isinstance(s, slice):
+                start, stop, step = s.indices(new_shape[dim])
+                if step <= 0:
+                    raise IndexError("Array: slice step must be positive")
+                if start < 0: start += self.shape[dim]
+                if stop < 0: stop += self.shape[dim]
+                if start < 0 or start > self.shape[dim]:
+                    raise IndexError("Array: slice start out of range")
+                if stop < 0 or stop > self.shape[dim]:
+                    raise IndexError("Array: slice stop out of range")
+                if stop < start:
+                    raise IndexError("Array: slice stop less than start")
+
+                new_offset += start * new_strides[dim]
+                new_strides[dim] *= step
+                new_shape[dim] = (stop - start + (step - 1)) // step
+                dim += 1
+                
+            else:
+                raise TypeError("Only int and slice supported")
+        
+        handle = _backend.make_view(self._handle, new_shape, new_strides, new_offset)
+        if len(new_shape) == 0:
+            return handle.item()
+        return Array(handle)

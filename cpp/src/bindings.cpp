@@ -25,13 +25,33 @@ PYBIND11_MODULE(_backend, m) {
             [](const ArrayHandle& a) { return a.shape(); }
         )
         .def_property_readonly(
+            "strides",
+            [](const ArrayHandle& a) { return a.strides(); }
+        )
+        .def_property_readonly(
+            "offset",
+            [](const ArrayHandle& a) { return a.offset(); }
+        )
+        .def_property_readonly(
             "data",
             [](const ArrayHandle& a) { return a.data(); }
-        );
+        )
+        .def("item", [](ArrayHandle& h) -> float {
+        if (!h.shape().empty()) {
+            throw std::runtime_error("item(): can only convert scalar arrays to float");
+        }
+        h.synchronize();
+
+        return h.data()[h.offset()];
+    });
     m.def("create_array_from_buffer", [](py::buffer buf, std::vector<int64_t> shape) {
           return create_array_from_buffer_py(buf, shape, /*FH=*/nullptr);
       },
       py::arg("buf"), py::arg("shape"));
+    m.def("make_view", [](std::shared_ptr<ArrayHandle> h, std::vector<int64_t> shape, 
+                        std::vector<int64_t> strides, size_t offset) {
+        return std::make_shared<ArrayHandle>(h, shape, strides, offset);
+    });
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
 
