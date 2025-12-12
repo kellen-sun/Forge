@@ -17,12 +17,12 @@ static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
     : shape_{std::move(shape)}, offset_(0)
 {
+    strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
     if (nbytes == 0) {
         metal_buffer_ = nullptr;
         return;
     }
-    strides_ = make_strides(shape_);
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes
@@ -34,12 +34,12 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
 ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev)
     : shape_{std::move(shape)}, offset_(0)
 {
+    strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
     if (nbytes == 0) {
         metal_buffer_ = nullptr;
         return;
     }
-    strides_ = make_strides(shape_);
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithBytes:src_data
