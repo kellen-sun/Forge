@@ -48,4 +48,21 @@ BINARY_OP(add, +)
 BINARY_OP(sub, -)
 BINARY_OP(mul, *)
 BINARY_OP(div, /)
-)";
+
+kernel void copy_view(
+    device float* Dest          [[ buffer(0) ]],
+    const device float* Src     [[ buffer(1) ]],
+    constant long* shape        [[ buffer(2) ]],
+    constant long* strides_dst  [[ buffer(3) ]],
+    constant long& offset_dst   [[ buffer(4) ]],
+    constant long* strides_src  [[ buffer(5) ]],
+    constant long& offset_src   [[ buffer(6) ]],
+    constant uint& ndim         [[ buffer(7) ]],
+    uint gid                    [[ thread_position_in_grid ]])
+{
+    uint idx_dst = get_strided_index(gid, shape, strides_dst, offset_dst, ndim);
+
+    uint idx_src = get_strided_index(gid, shape, strides_src, offset_src, ndim);
+
+    Dest[idx_dst] = Src[idx_src];
+})";

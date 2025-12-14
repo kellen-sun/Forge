@@ -2,7 +2,8 @@
 
 #include "../include/array_handle.h"
 #include "../include/forge_handle.h"
-
+#include "../include/metal_utils.h"
+#include "../include/metal_source.h"
 
 static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
     std::vector<int64_t> strides(shape.size());
@@ -97,6 +98,52 @@ void ArrayHandle::set_event(void* event) {
     if (write_event_) CFRelease(write_event_);
     if (event) write_event_ = (void*)CFRetain(event);
     else write_event_ = nullptr;
+}
+
+void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, 
+                std::vector<int64_t> shape, 
+                std::vector<int64_t> strides, 
+                size_t offset) 
+{
+    std::string op_name = "copy_view";
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    
+    id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)get_default_forge()->queue_ptr();
+    id<MTLCommandBuffer> cmd = [queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:pipeline];
+
+    std::vector<int64_t> src_strides = other->strides();
+    
+    if (numel_from_shape(other->shape()) == 1 && numel_from_shape(shape) > 1) {
+        src_strides.assign(shape.size(), 0); 
+    }
+
+    [enc setBuffer:(__bridge id<MTLBuffer>)this->metal_buffer() offset:0 atIndex:0];
+    [enc setBuffer:(__bridge id<MTLBuffer>)other->metal_buffer() offset:0 atIndex:1];
+
+    uint ndim = (uint)shape.size();
+    
+    [enc setBytes:shape.data()   length:ndim*8 atIndex:2];
+    
+    [enc setBytes:strides.data() length:ndim*8 atIndex:3];
+    [enc setBytes:&offset        length:8      atIndex:4];
+    
+    [enc setBytes:src_strides.data()  length:ndim*8 atIndex:5];
+    size_t other_offset = other->offset();
+    [enc setBytes:&other_offset       length:8      atIndex:6];
+    
+    [enc setBytes:&ndim               length:4      atIndex:7];
+
+    NSUInteger n_elements = numel_from_shape(shape);
+    MTLSize gridSize = MTLSizeMake(n_elements, 1, 1);
+    NSUInteger threadGroupSize = MIN(pipeline.maxTotalThreadsPerThreadgroup, n_elements);
+    MTLSize threadgroupSize = MTLSizeMake(threadGroupSize, 1, 1);
+
+    [enc dispatchThreads:gridSize threadsPerThreadgroup:threadgroupSize];
+    [enc endEncoding];
+    [cmd commit];
+    this->set_event((__bridge void*)cmd);
 }
 
 void ArrayHandle::synchronize() {

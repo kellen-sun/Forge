@@ -32,6 +32,10 @@ public:
     // SETTER //
     void set_metal_buffer(void* buf) { metal_buffer_ = buf; }
     void set_event(void* event);
+    void copy_from(std::shared_ptr<ArrayHandle> other, 
+                    std::vector<int64_t> shape, 
+                    std::vector<int64_t> strides, 
+                    size_t offset);
 
     void synchronize();
 };

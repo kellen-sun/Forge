@@ -22,19 +22,19 @@ PYBIND11_MODULE(_backend, m) {
     py::class_<ArrayHandle, std::shared_ptr<ArrayHandle>>(m, "ArrayHandle")
         .def_property_readonly(
             "shape",
-            [](const ArrayHandle& a) { return a.shape(); }
+            [](const ArrayHandle& h) { return h.shape(); }
         )
         .def_property_readonly(
             "strides",
-            [](const ArrayHandle& a) { return a.strides(); }
+            [](const ArrayHandle& h) { return h.strides(); }
         )
         .def_property_readonly(
             "offset",
-            [](const ArrayHandle& a) { return a.offset(); }
+            [](const ArrayHandle& h) { return h.offset(); }
         )
         .def_property_readonly(
             "data",
-            [](const ArrayHandle& a) { return a.data(); }
+            [](const ArrayHandle& h) { return h.data(); }
         )
         .def("item", [](ArrayHandle& h) -> float {
         if (!h.shape().empty()) {
@@ -51,6 +51,13 @@ PYBIND11_MODULE(_backend, m) {
     m.def("make_view", [](std::shared_ptr<ArrayHandle> h, std::vector<int64_t> shape, 
                         std::vector<int64_t> strides, size_t offset) {
         return std::make_shared<ArrayHandle>(h, shape, strides, offset);
+    });
+    m.def("copy_to_view", [](std::shared_ptr<ArrayHandle> h, 
+                            std::shared_ptr<ArrayHandle> other, 
+                            std::vector<int64_t> shape, 
+                            std::vector<int64_t> strides, 
+                            size_t offset) {
+        h->copy_from(other, shape, strides, offset);
     });
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
