@@ -86,6 +86,10 @@ def test_negative_step(tensor_3d):
     view = tensor_3d[2:1]
     assert view.shape == (0, 3, 4)
 
+    view = tensor_3d[1][2:-2:-1]
+    assert view.shape == (1,4)
+    assert view.list() == [[20, 21, 22, 23]]
+
 def test_extreme_range_step(tensor_3d):
     """
     Way out of range.
@@ -139,9 +143,38 @@ def test_newaxis_expansion(tensor_3d):
 
 # --- __setitem__ ---
 
-def test_basic_integer_indexing(tensor_3d):
+def test_set_indexing(tensor_3d):
     tensor_3d[1,2] = [30, 31, 32, 33]
     assert tensor_3d.shape == (2, 3, 4)
     assert tensor_3d.list()[1][2] == [30, 31, 32, 33]
 
+def test_set_broadcasting(tensor_3d):
+    tensor_3d[1,1] = 3
+    assert tensor_3d.shape == (2, 3, 4)
+    assert tensor_3d.list()[1][1] == [3, 3, 3, 3]
+
+    tensor_3d[1,0] = [7]
+    assert tensor_3d.shape == (2, 3, 4)
+    assert tensor_3d[1,0].list() == [7, 7, 7, 7]
+
 # --- sum & len ---
+
+def test_sum(tensor_3d):
+    total = sum(tensor_3d)
+    assert total.shape == (3,4)
+    assert total.list() == [
+        [12.0, 14.0, 16.0, 18.0],
+        [20.0, 22.0, 24.0, 26.0],
+        [28.0, 30.0, 32.0, 34.0]
+    ]
+    tot2 = sum(total)
+    assert tot2.shape == (4,)
+    assert tot2.list() == [60.0, 66.0, 72.0, 78.0]
+    final = sum(tot2)
+    assert isinstance(final, float)
+    assert final == 276.0
+
+def test_len(tensor_3d):
+    assert len(tensor_3d) == 2
+    assert len(tensor_3d[0]) == 3
+    assert len(tensor_3d[0,0]) == 4

@@ -215,12 +215,13 @@ class Array:
 
         if isinstance(value, (list, tuple)):
             value = Array(value)
-        size = 1
-        for dim in value.shape:
-            size *= dim
+    
         if isinstance(value, (int, float)):
             val_handle = Array([value])._handle
         elif isinstance(value, Array):
+            size = 1
+            for dim in value.shape:
+                size *= dim
             if value.shape == tuple(new_shape) or size == 1:
                 val_handle = value._handle
             else:
