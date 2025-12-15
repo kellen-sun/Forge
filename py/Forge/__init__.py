@@ -1,3 +1,4 @@
+from . import ops
 from .array import Array
 from .forge import forge
 
@@ -7,4 +8,5 @@ __version__ = "0.0.1"
 __all__ = [
     "forge",
     "Array",
+    "ops",
 ]

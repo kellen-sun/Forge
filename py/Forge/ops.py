@@ -32,10 +32,6 @@ def array_sub(self, other):
     return _call_op(self, other, "sub")
 
 
-def array_rsub(self, other):
-    return array_sub(other, self)
-
-
 def array_mul(self, other):
     if not isinstance(other, Array):
         return NotImplemented
@@ -46,10 +42,6 @@ def array_div(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return _call_op(self, other, "div")
-
-
-def array_rdiv(self, other):
-    return array_div(other, self)
 
 
 Array.__add__ = array_add
