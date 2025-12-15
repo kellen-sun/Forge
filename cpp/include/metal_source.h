@@ -6,19 +6,19 @@ const char* const ELEMENTWISE_METAL_SOURCE = R"(
 #include <metal_stdlib>
 using namespace metal;
 
-uint get_strided_index(uint gid, 
-                       constant long* shape, 
-                       constant long* strides, 
-                       constant long& offset, 
-                       uint dims) 
+uint get_strided_index(uint gid,
+                       constant long* shape,
+                       constant long* strides,
+                       constant long& offset,
+                       uint dims)
 {
     uint physical_idx = offset;
     uint remaining = gid;
 
     for (int i = dims - 1; i >= 0; --i) {
-        uint coordinate = remaining % shape[i]; 
-        physical_idx += coordinate * strides[i]; 
-        remaining /= shape[i]; 
+        uint coordinate = remaining % shape[i];
+        physical_idx += coordinate * strides[i];
+        remaining /= shape[i];
     }
     return physical_idx;
 }

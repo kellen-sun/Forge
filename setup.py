@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="Forge",
@@ -6,6 +6,6 @@ setup(
     packages=find_packages(where="py/Forge"),
     package_dir={"": "py"},
     install_requires=[
-        'numpy>=1.20.0',
+        "numpy>=1.20.0",
     ],
 )
