@@ -27,25 +27,26 @@ std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::ve
 py::object array_to_list(const ArrayHandle& h) {
     const_cast<ArrayHandle&>(h).synchronize();
     const std::vector<int64_t> shape = h.shape();
+    const std::vector<int64_t> strides = h.strides();
     const std::span<const float> data = h.data();
-    if (shape.empty()) {
-        return py::float_(data.size() ? data[0] : 0.0);
+    if (shape.empty() || strides.empty()) {
+        return py::float_(data.size() ? data[h.offset()] : 0.0);
     }
 
-    std::function<py::object(size_t, size_t)> build = [&](size_t dim, size_t offset) -> py::object {
+    std::function<py::object(size_t, size_t)> build;
+    build = [&](size_t dim, size_t offset) -> py::object {
+        int64_t stride = strides[dim];
         if (dim + 1 == shape.size()) {
             py::list lst;
             for (int64_t i = 0; i < shape[dim]; ++i) 
-                lst.append(py::float_(data[offset + i]));
+                lst.append(py::float_(data[offset + i * stride]));
             return lst;
         } else {
             py::list lst;
-            int64_t stride = 1;
-            for (size_t k = dim + 1; k < shape.size(); ++k) stride *= shape[k];
             for (int64_t i = 0; i < shape[dim]; ++i)
                 lst.append(build(dim + 1, offset + i * stride));
             return lst;
         }
     };
-    return build(0, 0);
+    return build(0, h.offset());
 }
