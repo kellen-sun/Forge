@@ -179,12 +179,16 @@ def test_set_indexing(tensor_3d):
     assert tensor_3d.shape == (2, 3, 4)
     assert tensor_3d.list()[1][2] == [30, 31, 32, 33]
 
+def test_set_indexing_error(tensor_3d):
+    with pytest.raises(ValueError):
+        tensor_3d[1,2] = [30, 31, 32]
+
 def test_set_broadcasting(tensor_3d):
     tensor_3d[1,1] = 3
     assert tensor_3d.shape == (2, 3, 4)
     assert tensor_3d.list()[1][1] == [3, 3, 3, 3]
 
-    tensor_3d[1,0] = [7]
+    tensor_3d[1] = [7]
     assert tensor_3d.shape == (2, 3, 4)
     assert tensor_3d[1,0].list() == [7, 7, 7, 7]
 
