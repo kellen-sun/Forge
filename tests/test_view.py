@@ -121,6 +121,18 @@ def test_chain_indexing_vs_tuple(tensor_3d):
     assert tuple_view.list() == chain_view.list()
     assert tuple_view.shape == chain_view.shape
 
+def test_empty_array():
+    """Test behavior on empty arrays."""
+    a = Array([])
+    assert len(a) == 0
+    assert a.shape == (0,)
+    
+    assert a[:].list() == []
+    assert a[::-1].list() == []
+    
+    with pytest.raises(IndexError):
+        _ = a[0]
+
 # --- None & Ellipsis ---
 
 def test_ellipsis_indexing(tensor_3d):
@@ -140,6 +152,25 @@ def test_newaxis_expansion(tensor_3d):
 
     view = tensor_3d[:, None, :]
     assert view.shape == (2, 1, 3, 4)
+
+def test_newaxis_and_ellipsis_combo(tensor_3d):
+    """Combine ... and None."""
+    # Shape (2, 3, 4) -> a[..., None] -> (2, 3, 4, 1)
+    view = tensor_3d[..., None]
+    assert view.shape == (2, 3, 4, 1)
+    
+    original_flat = []
+    for block in tensor_3d.list():
+        for row in block:
+            original_flat.extend(row)
+            
+    view_flat = []
+    for block in view.list():
+        for row in block:
+            for col in row:
+                view_flat.extend(col)
+                
+    assert original_flat == view_flat
 
 # --- __setitem__ ---
 

@@ -144,7 +144,7 @@ class Array:
 
         dim = 0
         deleted = 0
-        if len(self.shape) < len(key):
+        if len(self.shape) < len(key) - key.count(None):
             raise IndexError("Array: too many indices for array")
         for s in key:
             if s is None:
@@ -173,13 +173,14 @@ class Array:
                 else: start = s.start
                 if s.stop is None:
                     if step > 0: stop = self.shape[dim]
+                    elif self.shape[dim] == 0: stop = 0
                     else: stop = -1 - self.shape[dim]
                 else: stop = s.stop
                 
                 if start < 0: start += self.shape[dim]
                 if stop < 0: stop += self.shape[dim]
                 if start < 0: start = 0
-                if start >= self.shape[dim]: start = self.shape[dim] - 1
+                if start >= self.shape[dim] and self.shape[dim]: start = self.shape[dim] - 1
                 if stop < -1: stop = -1
                 if stop > self.shape[dim]: stop = self.shape[dim]
 
