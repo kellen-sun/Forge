@@ -45,6 +45,7 @@ PYBIND11_MODULE(_backend, m) {
     m.def("copy_to_view", [](std::shared_ptr<ArrayHandle> h, std::shared_ptr<ArrayHandle> other,
                              std::vector<int64_t> shape, std::vector<int64_t> strides,
                              size_t offset) { h->copy_from(other, shape, strides, offset); });
+    m.def("reshape", &array_reshape);
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
 

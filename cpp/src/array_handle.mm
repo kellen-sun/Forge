@@ -145,3 +145,26 @@ void ArrayHandle::synchronize() {
 }
 
 std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h) { return h->shape(); }
+
+std::shared_ptr<ArrayHandle> array_reshape(const std::shared_ptr<ArrayHandle>& h,
+                                           std::vector<int64_t> shape) {
+    bool contiguous = true;
+    int64_t z = 1;
+    const auto& other_shape = h->shape();
+    const auto& other_strides = h->strides();
+    for (int i = other_shape.size() - 1; i >= 0; --i) {
+        if (other_strides[i] != z) {
+            contiguous = false;
+            break;
+        }
+        z *= other_shape[i];
+    }
+    std::vector<int64_t> new_strides = make_strides(shape);
+    if (contiguous) {
+        return std::make_shared<ArrayHandle>(h, shape, new_strides, h->offset());
+    }
+    std::shared_ptr<ArrayHandle> ret = std::make_shared<ArrayHandle>(shape);
+    std::vector<int64_t> compact_strides = make_strides(h->shape());
+    ret->copy_from(h, other_shape, compact_strides, 0);
+    return ret;
+}

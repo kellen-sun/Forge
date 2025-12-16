@@ -33,4 +33,4 @@ In Python, we can save those ``Array`` types and apply operations on them such a
 
 We can index into the Array with all the usual methods, with the brackets [4] supporting both regular indexing and slicing [1:5:2] and into multiple dimensions just as in usual lists [3, 4]. When indexing to read the items, this merely creates a view into the already existing data (without making a copy). -> Later on, we can support fancy indexing with double brackets [[4, 5]].
 
-We also support ``len()`` and ``sum()``. We can take a transpose using ``Array.T`` and reshape our array with ``Array.reshape()``, using a ``-1`` to fill in columns.
+We also support ``len()`` and ``sum()``. We can take a transpose using ``Array.T`` and reshape our array with ``Array.reshape()``, using a ``-1`` to fill in a dimension. Note that transposes never make a copy of the underlying data, while reshape usually doesn't, but might if the data to be reshaped is not contiguous in memory.

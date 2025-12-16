@@ -52,3 +52,6 @@ inline size_t numel_from_shape(const std::vector<int64_t>& shape) {
 }
 
 std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h);
+
+std::shared_ptr<ArrayHandle> array_reshape(const std::shared_ptr<ArrayHandle>& h,
+                                           std::vector<int64_t> shape);
