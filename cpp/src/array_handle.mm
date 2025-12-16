@@ -5,6 +5,15 @@
 #include "../include/metal_source.h"
 #include "../include/metal_utils.h"
 
+ArrayStorage::~ArrayStorage() {
+    if (metal_buffer_) {
+        CFRelease(metal_buffer_);
+    }
+    if (write_event_) {
+        CFRelease(write_event_);
+    }
+}
+
 static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
     std::vector<int64_t> strides(shape.size());
     int64_t stride = 1;
@@ -19,23 +28,23 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
     : shape_{std::move(shape)}, offset_(0) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
+    storage_ = std::make_shared<ArrayStorage>();
     if (nbytes == 0) {
-        metal_buffer_ = nullptr;
         return;
     }
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes options:MTLResourceStorageModeShared];
 
-    metal_buffer_ = (__bridge_retained void*)buf;
+    storage_->metal_buffer_ = (__bridge_retained void*)buf;
 }
 
 ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev)
     : shape_{std::move(shape)}, offset_(0) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
+    storage_ = std::make_shared<ArrayStorage>();
     if (nbytes == 0) {
-        metal_buffer_ = nullptr;
         return;
     }
     if (!dev) dev = get_default_forge()->device_ptr();
@@ -44,39 +53,26 @@ ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void
                                             length:nbytes
                                            options:MTLResourceStorageModeShared];
 
-    metal_buffer_ = (__bridge_retained void*)buf;
+    storage_->metal_buffer_ = (__bridge_retained void*)buf;
 }
 
 ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
                          std::vector<int64_t> new_strides, size_t new_offset)
     : shape_(std::move(new_shape)), strides_(std::move(new_strides)), offset_(new_offset) {
     parent->synchronize();
-    metal_buffer_ = parent->metal_buffer();
-    if (metal_buffer_) {
-        CFRetain(metal_buffer_);
-    }
-    write_event_ = nullptr;
+    storage_ = parent->storage_;
 }
 
-ArrayHandle::~ArrayHandle() {
-    if (metal_buffer_) {
-        CFRelease(metal_buffer_);
-        metal_buffer_ = nullptr;
-    }
-    if (write_event_) {
-        CFRelease(write_event_);
-        write_event_ = nullptr;
-    }
-}
+ArrayHandle::~ArrayHandle() {}
 
 std::span<float> ArrayHandle::data() {
     size_t total = numel_from_shape(shape_);
     if (total == 0) return {};
-    if (!metal_buffer_) {
+    if (!storage_->metal_buffer_) {
         throw std::runtime_error(
             "ArrayHandle::data: no existing metal_buffer associated with ArrayHandle");
     }
-    id<MTLBuffer> buf = (__bridge id<MTLBuffer>)metal_buffer_;
+    id<MTLBuffer> buf = (__bridge id<MTLBuffer>)storage_->metal_buffer_;
     float* src = (float*)[buf contents];
 
     return std::span<float>(src, total);
@@ -85,13 +81,17 @@ std::span<float> ArrayHandle::data() {
 std::span<const float> ArrayHandle::data() const { return const_cast<ArrayHandle*>(this)->data(); }
 
 void ArrayHandle::set_event(void* event) {
-    if (write_event_ == event) return;
-    if (write_event_) CFRelease(write_event_);
+    if (storage_->write_event_ == event) return;
+    if (storage_->write_event_) CFRelease(storage_->write_event_);
     if (event)
-        write_event_ = (void*)CFRetain(event);
+        storage_->write_event_ = (void*)CFRetain(event);
     else
-        write_event_ = nullptr;
+        storage_->write_event_ = nullptr;
 }
+
+void* ArrayHandle::metal_buffer() const { return storage_->metal_buffer_; }
+
+void ArrayHandle::set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
 
 void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                             std::vector<int64_t> strides, size_t offset) {
@@ -137,11 +137,11 @@ void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int6
 }
 
 void ArrayHandle::synchronize() {
-    if (!write_event_) return;
-    id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)write_event_;
+    if (!storage_->write_event_) return;
+    id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)storage_->write_event_;
     [cmd waitUntilCompleted];
-    CFRelease(write_event_);
-    write_event_ = nullptr;
+    CFRelease(storage_->write_event_);
+    storage_->write_event_ = nullptr;
 }
 
 std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h) { return h->shape(); }

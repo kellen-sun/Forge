@@ -5,13 +5,18 @@
 
 #include "forge_handle.h"
 
+struct ArrayStorage {
+    void* metal_buffer_ = nullptr;
+    void* write_event_ = nullptr;
+
+    ~ArrayStorage();
+};
 class ArrayHandle {
    private:
     std::vector<int64_t> shape_;
     std::vector<int64_t> strides_;
     size_t offset_;
-    void* metal_buffer_ = nullptr;
-    void* write_event_ = nullptr;
+    std::shared_ptr<ArrayStorage> storage_;
 
    public:
     // CONSTRUCTORS //
@@ -27,10 +32,10 @@ class ArrayHandle {
     size_t offset() const { return offset_; }
     std::span<const float> data() const;
     std::span<float> data();
-    void* metal_buffer() const { return metal_buffer_; }
+    void* metal_buffer() const;
 
     // SETTER //
-    void set_metal_buffer(void* buf) { metal_buffer_ = buf; }
+    void set_metal_buffer(void* buf);
     void set_event(void* event);
     void copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                    std::vector<int64_t> strides, size_t offset);
