@@ -11,6 +11,7 @@ struct ArrayStorage {
 
     ~ArrayStorage();
 };
+
 class ArrayHandle {
    private:
     std::vector<int64_t> shape_;
@@ -32,10 +33,10 @@ class ArrayHandle {
     size_t offset() const { return offset_; }
     std::span<const float> data() const;
     std::span<float> data();
-    void* metal_buffer() const;
+    void* ArrayHandle::metal_buffer() const { return storage_->metal_buffer_; }
 
     // SETTER //
-    void set_metal_buffer(void* buf);
+    void ArrayHandle::set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
     void set_event(void* event);
     void copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                    std::vector<int64_t> strides, size_t offset);

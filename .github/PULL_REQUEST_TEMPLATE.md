@@ -7,6 +7,7 @@
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 
 ## Checklist
+- [ ] I've confirmed that the backend compiles without errors.
 - [ ] I have performed a self-review of my own code.
 - [ ] My changes pass existing unit tests.
 - [ ] I added relevant and comprehensive additional tests.

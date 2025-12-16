@@ -89,10 +89,6 @@ void ArrayHandle::set_event(void* event) {
         storage_->write_event_ = nullptr;
 }
 
-void* ArrayHandle::metal_buffer() const { return storage_->metal_buffer_; }
-
-void ArrayHandle::set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
-
 void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                             std::vector<int64_t> strides, size_t offset) {
     std::string op_name = "copy_view";
