@@ -8,9 +8,10 @@ Clone the repo, install dependencies and build the library. In the future, this 
 git clone repo
 ```
 
-Make a virtual environment and activate it. 
+Make a virtual environment and activate it.
 ```
 pip install pytest
+pip install pre-commit
 ```
 To run benchmarks probably will need to pip install other stuff like pytorch, numba, mlx, etc. (tbd)
 
@@ -34,4 +35,8 @@ pip install -e .
 to run tests
 ```
 pytest -q
+```
+Every git commit will run the pre-commit code formatter. You can also run it manually with:
+```
+pre-commit run --all-files
 ```

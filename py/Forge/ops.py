@@ -1,6 +1,7 @@
 from . import _backend
 from .array import Array
 
+
 def _call_op(a: Array, b: Array, op_type: str) -> Array:
     if a.shape != b.shape:
         raise ValueError(op_type + ": array shapes do not match")
@@ -16,6 +17,7 @@ def _call_op(a: Array, b: Array, op_type: str) -> Array:
         raise ValueError("Unsupported operation type: " + op_type)
     return Array.from_handle(h)
 
+
 def array_add(self, other):
     if other == 0:
         return self
@@ -23,26 +25,24 @@ def array_add(self, other):
         return NotImplemented
     return _call_op(self, other, "add")
 
+
 def array_sub(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return _call_op(self, other, "sub")
 
-def array_rsub(self, other):
-    return array_sub(other, self)
 
 def array_mul(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return _call_op(self, other, "mul")
 
+
 def array_div(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return _call_op(self, other, "div")
 
-def array_rdiv(self, other):
-    return array_div(other, self)
 
 Array.__add__ = array_add
 Array.__radd__ = array_add

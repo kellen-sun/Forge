@@ -1,0 +1,6 @@
+line-length = 100  # Matches your C++ ColumnLimit if you set that to 100
+
+[lint]
+# Enable Pyflakes (F), pycodestyle (E), and isort (I)
+select = ["F", "E", "I"]
+# I = isort. This automatically sorts your imports (e.g., standard lib first, then 3rd party, then local).

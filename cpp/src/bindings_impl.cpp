@@ -1,22 +1,21 @@
+#include <pybind11/buffer_info.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/buffer_info.h>
 
 #include "../include/array_handle.h"
 
 namespace py = pybind11;
 
-
 std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::vector<int64_t> shape,
-    ForgeHandle* FH)
-{
+                                                         ForgeHandle* FH) {
     py::buffer_info info = buf.request();
     if (info.format != py::format_descriptor<float>::format() || info.itemsize != 4) {
         throw std::runtime_error("create_array_from_buffer: buffer must be float32 and contiguous");
     }
     int64_t total = numel_from_shape(shape);
     if (info.size != total) {
-        throw std::runtime_error("create_array_from_buffer: buffer length doesn't match given shape");
+        throw std::runtime_error(
+            "create_array_from_buffer: buffer length doesn't match given shape");
     }
     float* src_ptr = static_cast<float*>(info.ptr);
     void* dev = FH ? FH->device_ptr() : get_default_forge()->device_ptr();
@@ -38,7 +37,7 @@ py::object array_to_list(const ArrayHandle& h) {
         int64_t stride = strides[dim];
         if (dim + 1 == shape.size()) {
             py::list lst;
-            for (int64_t i = 0; i < shape[dim]; ++i) 
+            for (int64_t i = 0; i < shape[dim]; ++i)
                 lst.append(py::float_(data[offset + i * stride]));
             return lst;
         } else {

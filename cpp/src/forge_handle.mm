@@ -1,10 +1,9 @@
-#import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
+#import <Metal/Metal.h>
 
-#include "../include/forge_handle.h"
 #include "../include/array_handle.h"
+#include "../include/forge_handle.h"
 #include "../include/runtime.h"
-
 
 struct ForgeHandle::Impl {
     id<MTLDevice> device;
@@ -17,7 +16,7 @@ struct ForgeHandle::Impl {
 };
 
 // TODO: Delete this constructor?
-ForgeHandle::ForgeHandle(const std::string &ir) : ir_repr_(std::move(ir)) {}
+ForgeHandle::ForgeHandle(const std::string& ir) : ir_repr_(std::move(ir)) {}
 
 ForgeHandle::ForgeHandle() : impl(std::make_unique<Impl>()) {
     @autoreleasepool {
@@ -30,10 +29,6 @@ ForgeHandle::~ForgeHandle() = default;
 ForgeHandle::ForgeHandle(ForgeHandle&&) noexcept = default;
 ForgeHandle& ForgeHandle::operator=(ForgeHandle&&) noexcept = default;
 
-void* ForgeHandle::device_ptr() const {
-    return (__bridge void*) impl->device;
-}
+void* ForgeHandle::device_ptr() const { return (__bridge void*)impl->device; }
 
-void* ForgeHandle::queue_ptr() const {
-    return (__bridge void*) impl->queue;
-}
+void* ForgeHandle::queue_ptr() const { return (__bridge void*)impl->queue; }

@@ -4,11 +4,9 @@
 #include "../include/metal_source.h"
 #include "../include/metal_utils.h"
 
-std::shared_ptr<ArrayHandle> binops_arrays_cpp(
-    const std::shared_ptr<ArrayHandle>& A, 
-    const std::shared_ptr<ArrayHandle>& B,
-    const std::string& op_name)
-{
+std::shared_ptr<ArrayHandle> binops_arrays_cpp(const std::shared_ptr<ArrayHandle>& A,
+                                               const std::shared_ptr<ArrayHandle>& B,
+                                               const std::string& op_name) {
     const auto& shapeA = A->shape();
     const auto& shapeB = B->shape();
 
@@ -17,28 +15,25 @@ std::shared_ptr<ArrayHandle> binops_arrays_cpp(
     }
 
     auto defaultForgeHandle = get_default_forge();
-    id<MTLDevice> device =  (__bridge id<MTLDevice>) defaultForgeHandle->device_ptr();
-    id<MTLCommandQueue> queue =  (__bridge id<MTLCommandQueue>) defaultForgeHandle->queue_ptr();
+    id<MTLDevice> device = (__bridge id<MTLDevice>)defaultForgeHandle->device_ptr();
+    id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
     id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
 
     // allocate output ArrayHandle
-    auto out = std::make_shared<ArrayHandle>(
-        A->shape(),
-        defaultForgeHandle->device_ptr()
-    );
-    
-    id<MTLBuffer> bufA = (__bridge id<MTLBuffer>) A->metal_buffer();
-    id<MTLBuffer> bufB = (__bridge id<MTLBuffer>) B->metal_buffer();
-    id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>) out->metal_buffer();
+    auto out = std::make_shared<ArrayHandle>(A->shape(), defaultForgeHandle->device_ptr());
+
+    id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
+    id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)B->metal_buffer();
+    id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>)out->metal_buffer();
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd)
-        throw std::runtime_error("Metal Error: Failed to create command buffer. GPU might out of memory.");
+        throw std::runtime_error(
+            "Metal Error: Failed to create command buffer. GPU might out of memory.");
     id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
-    if (!enc)
-        throw std::runtime_error("Metal Error: Failed to create command encoder.");
+    if (!enc) throw std::runtime_error("Metal Error: Failed to create command encoder.");
     [enc setComputePipelineState:pipeline];
     [enc setBuffer:bufA offset:0 atIndex:0];
     [enc setBuffer:bufB offset:0 atIndex:1];
@@ -46,15 +41,15 @@ std::shared_ptr<ArrayHandle> binops_arrays_cpp(
 
     uint ndim = (uint)out->shape().size();
 
-    [enc setBytes:out->shape().data() length:ndim*8             atIndex:3];
+    [enc setBytes:out->shape().data() length:ndim * 8 atIndex:3];
     size_t current_offsetA = A->offset();
-    [enc setBytes:A->strides().data() length:ndim*8             atIndex:4];
-    [enc setBytes:&current_offsetA    length:sizeof(size_t)     atIndex:5];
+    [enc setBytes:A->strides().data() length:ndim * 8 atIndex:4];
+    [enc setBytes:&current_offsetA length:sizeof(size_t) atIndex:5];
     size_t current_offsetB = B->offset();
-    [enc setBytes:B->strides().data() length:ndim*8             atIndex:6];
-    [enc setBytes:&current_offsetB    length:sizeof(size_t)     atIndex:7];
+    [enc setBytes:B->strides().data() length:ndim * 8 atIndex:6];
+    [enc setBytes:&current_offsetB length:sizeof(size_t) atIndex:7];
 
-    [enc setBytes:&ndim               length:4                  atIndex:8];
+    [enc setBytes:&ndim length:4 atIndex:8];
 
     MTLSize grid = MTLSizeMake(A->data().size(), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);

@@ -9,7 +9,7 @@ find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 REQUIRED)
 
 pybind11_add_module(
-    _backend 
+    _backend
     cpp/src/bindings.cpp
     cpp/src/bindings_impl.cpp
     cpp/src/array_handle.mm
