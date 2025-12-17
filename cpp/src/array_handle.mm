@@ -6,12 +6,8 @@
 #include "../include/metal_utils.h"
 
 ArrayStorage::~ArrayStorage() {
-    if (metal_buffer_) {
-        CFRelease(metal_buffer_);
-    }
-    if (write_event_) {
-        CFRelease(write_event_);
-    }
+    if (metal_buffer_) CFRelease(metal_buffer_);
+    if (write_event_) CFRelease(write_event_);
 }
 
 static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
@@ -25,13 +21,10 @@ static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
 }
 
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
-    : shape_{std::move(shape)}, offset_(0) {
+    : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
-    storage_ = std::make_shared<ArrayStorage>();
-    if (nbytes == 0) {
-        return;
-    }
+    if (nbytes == 0) return;
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes options:MTLResourceStorageModeShared];
@@ -40,13 +33,10 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
 }
 
 ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev)
-    : shape_{std::move(shape)}, offset_(0) {
+    : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
-    storage_ = std::make_shared<ArrayStorage>();
-    if (nbytes == 0) {
-        return;
-    }
+    if (nbytes == 0) return;
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithBytes:src_data
@@ -58,12 +48,12 @@ ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void
 
 ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
                          std::vector<int64_t> new_strides, size_t new_offset)
-    : shape_(std::move(new_shape)), strides_(std::move(new_strides)), offset_(new_offset) {
+    : shape_(std::move(new_shape)),
+      strides_(std::move(new_strides)),
+      offset_(new_offset),
+      storage_(parent->storage_) {
     parent->synchronize();
-    storage_ = parent->storage_;
 }
-
-ArrayHandle::~ArrayHandle() {}
 
 std::span<float> ArrayHandle::data() {
     size_t total = numel_from_shape(shape_);
@@ -155,12 +145,10 @@ std::shared_ptr<ArrayHandle> array_reshape(const std::shared_ptr<ArrayHandle>& h
         }
         z *= other_shape[i];
     }
-    std::vector<int64_t> new_strides = make_strides(shape);
     if (contiguous) {
-        return std::make_shared<ArrayHandle>(h, shape, new_strides, h->offset());
+        return std::make_shared<ArrayHandle>(h, shape, make_strides(shape), h->offset());
     }
     std::shared_ptr<ArrayHandle> ret = std::make_shared<ArrayHandle>(shape);
-    std::vector<int64_t> compact_strides = make_strides(h->shape());
-    ret->copy_from(h, other_shape, compact_strides, 0);
+    ret->copy_from(h, other_shape, make_strides(h->shape()), 0);
     return ret;
 }

@@ -25,7 +25,6 @@ class ArrayHandle {
     ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev = nullptr);
     ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
                 std::vector<int64_t> new_strides, size_t new_offset);
-    ~ArrayHandle();
 
     // ACCESSORS //
     const std::vector<int64_t>& shape() const { return shape_; }
@@ -33,10 +32,10 @@ class ArrayHandle {
     size_t offset() const { return offset_; }
     std::span<const float> data() const;
     std::span<float> data();
-    void* ArrayHandle::metal_buffer() const { return storage_->metal_buffer_; }
+    void* metal_buffer() const { return storage_->metal_buffer_; }
 
     // SETTER //
-    void ArrayHandle::set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
+    void set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
     void set_event(void* event);
     void copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                    std::vector<int64_t> strides, size_t offset);
