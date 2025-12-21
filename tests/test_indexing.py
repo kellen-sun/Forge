@@ -187,6 +187,10 @@ def test_set_indexing(tensor_3d):
     assert tensor_3d.shape == (2, 3, 4)
     assert tensor_3d.list()[1][2] == [30, 31, 32, 33]
 
+    t = tensor_3d[:]
+    t[0, 0, 0] = 99
+    assert tensor_3d[0, 0, 0] == 99
+
 
 def test_set_indexing_error(tensor_3d):
     with pytest.raises(ValueError):

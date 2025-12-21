@@ -1,4 +1,4 @@
-from . import ops
+from . import ops, shape
 from .array import Array
 from .forge import forge
 
@@ -9,4 +9,5 @@ __all__ = [
     "forge",
     "Array",
     "ops",
+    "shape",
 ]
