@@ -10,16 +10,6 @@ ArrayStorage::~ArrayStorage() {
     if (write_event_) CFRelease(write_event_);
 }
 
-static std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
-    std::vector<int64_t> strides(shape.size());
-    int64_t stride = 1;
-    for (int i = (int)shape.size() - 1; i >= 0; i--) {
-        strides[i] = stride;
-        stride *= shape[i];
-    }
-    return strides;
-}
-
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
     : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
     strides_ = make_strides(shape_);
@@ -52,7 +42,7 @@ ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector
       strides_(std::move(new_strides)),
       offset_(new_offset),
       storage_(parent->storage_) {
-    parent->synchronize();
+    // parent->synchronize(); // TODO: Do we need to synch here???
 }
 
 std::span<float> ArrayHandle::data() {
