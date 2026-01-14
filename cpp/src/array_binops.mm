@@ -217,10 +217,15 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
 
     // Loop only over batch dimensions
     for (size_t op = 0; op < total_ops; ++op) {
-        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
-        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:bufB offset:off_b descriptor:descB];
-        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:bufC offset:off_c descriptor:descC];
-        [kernel encodeToCommandBuffer:cmd leftMatrix:matA rightMatrix:matB resultMatrix:matC];
+        @autoreleasepool {
+            MPSMatrix* matA =
+                [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
+            MPSMatrix* matB =
+                [[MPSMatrix alloc] initWithBuffer:bufB offset:off_b descriptor:descB];
+            MPSMatrix* matC =
+                [[MPSMatrix alloc] initWithBuffer:bufC offset:off_c descriptor:descC];
+            [kernel encodeToCommandBuffer:cmd leftMatrix:matA rightMatrix:matB resultMatrix:matC];
+        }
 
         off_c += M * N * dsize;
         for (int dim = (int)batch_shape.size() - 1; dim >= 0; --dim) {
