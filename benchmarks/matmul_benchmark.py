@@ -11,9 +11,7 @@ import time
 from typing import Callable
 
 import numpy as np
-
 from Forge import Array
-
 
 # ==============================================================================
 # Utility functions
@@ -155,7 +153,9 @@ def test_correctness():
         passed = allclose(result_forge, result_np)
         all_passed &= passed
         status = "PASS" if passed else "FAIL"
-        print(f"    ({batch}x{m}x{k}) @ ({batch}x{k}x{n}) -> ({batch}x{m}x{n}): {status}")
+        print(
+            f"    ({batch}x{m}x{k}) @ ({batch}x{k}x{n}) -> ({batch}x{m}x{n}): {status}"
+        )
 
     # Test 6: Transposed input
     print("\n  [Transposed Input]")
@@ -290,7 +290,9 @@ def benchmark_batched_matmul():
         result_np = a_np @ b_np
         correct = allclose(result_forge, result_np)
 
-        print_result(f"batch={batch}, {m}x{n} @ {n}x{m}", forge_time, numpy_time, correct)
+        print_result(
+            f"batch={batch}, {m}x{n} @ {n}x{m}", forge_time, numpy_time, correct
+        )
 
 
 def benchmark_matvec():

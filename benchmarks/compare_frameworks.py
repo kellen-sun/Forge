@@ -7,7 +7,6 @@ import time
 import mlx.core as mx
 import numpy as np
 import torch
-
 from Forge import Array
 
 
@@ -188,7 +187,9 @@ def benchmark_batched():
 
         mlx_time, _ = time_fn(mlx_matmul)
 
-        print_row(f"batch={batch}, {m}x{n}", forge_time, numpy_time, torch_time, mlx_time)
+        print_row(
+            f"batch={batch}, {m}x{n}", forge_time, numpy_time, torch_time, mlx_time
+        )
 
 
 def benchmark_transformer_shapes():
