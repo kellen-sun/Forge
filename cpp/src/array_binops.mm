@@ -138,20 +138,26 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     if (K_a != K_b) throw std::runtime_error("matmul: dimension mismatch");
     int64_t K = K_a;
 
-    auto out_batch =
+    // Compute batch dimensions separately from M, N
+    auto batch_shape =
         broadcast_shapes({Ashape.begin(), Ashape.end() - 2}, {Bshape.begin(), Bshape.end() - 2});
-    out_batch.push_back(M);
-    out_batch.push_back(N);
 
-    auto c = std::make_shared<ArrayHandle>(out_batch);
+    // Build full output shape: batch_dims + M + N
+    auto out_shape = batch_shape;
+    out_shape.push_back(M);
+    out_shape.push_back(N);
 
-    // fill up c
+    auto c = std::make_shared<ArrayHandle>(out_shape);
+
+    // Compute strides for batch dimensions only (excluding M, N)
     auto get_batch_strides = [&](const std::vector<int64_t>& shape) {
         std::vector<int64_t> strides;
-        int offset = (int)out_batch.size() - ((int)shape.size() - 2);
+        int ndim = (int)shape.size();
+        int batch_ndim = ndim - 2;  // Number of batch dims in this tensor
+        int offset = (int)batch_shape.size() - batch_ndim;
         auto dense = make_strides(shape);
-        for (int i = 0; i < out_batch.size(); ++i) {
-            int idx = i - offset;
+        for (size_t i = 0; i < batch_shape.size(); ++i) {
+            int idx = (int)i - offset;
             // If dim missing (idx < 0) or dim is 1 -> Stride is 0 (Broadcast)
             if (idx < 0 || shape[idx] == 1)
                 strides.push_back(0);
@@ -197,15 +203,19 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)b->metal_buffer();
     id<MTLBuffer> bufC = (__bridge id<MTLBuffer>)c->metal_buffer();
 
+    // total_ops only counts batch dimensions (not M, N)
     size_t total_ops = 1;
-    for (auto s : out_batch) total_ops *= s;
-    std::vector<int> counters(out_batch.size(), 0);
+    for (auto s : batch_shape) total_ops *= s;
+    // For 2D matmul with no batch dims, batch_shape is empty, so total_ops = 1
+    if (batch_shape.empty()) total_ops = 1;
+
+    std::vector<int> counters(batch_shape.size(), 0);
 
     size_t off_a = a->offset() * dsize;
     size_t off_b = b->offset() * dsize;
     size_t off_c = 0;
 
-    // loop through ndim's and carry when needed
+    // Loop only over batch dimensions
     for (size_t op = 0; op < total_ops; ++op) {
         MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
         MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:bufB offset:off_b descriptor:descB];
@@ -213,12 +223,12 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
         [kernel encodeToCommandBuffer:cmd leftMatrix:matA rightMatrix:matB resultMatrix:matC];
 
         off_c += M * N * dsize;
-        for (int dim = (int)out_batch.size() - 1; dim >= 0; --dim) {
+        for (int dim = (int)batch_shape.size() - 1; dim >= 0; --dim) {
             counters[dim]++;
-            if (counters[dim] == out_batch[dim]) {
+            if (counters[dim] == batch_shape[dim]) {
                 counters[dim] = 0;
-                off_a -= (out_batch[dim] - 1) * str_a[dim] * dsize;
-                off_b -= (out_batch[dim] - 1) * str_b[dim] * dsize;
+                off_a -= (batch_shape[dim] - 1) * str_a[dim] * dsize;
+                off_b -= (batch_shape[dim] - 1) * str_b[dim] * dsize;
             } else {
                 off_a += str_a[dim] * dsize;
                 off_b += str_b[dim] * dsize;
