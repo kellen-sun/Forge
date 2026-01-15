@@ -44,6 +44,12 @@ def array_div(self, other):
     return _call_op(self, other, "div")
 
 
+def array_matmul(self, other):
+    if not isinstance(other, Array):
+        return NotImplemented
+    return Array(_backend.matmul(self._handle, other._handle))
+
+
 Array.__add__ = array_add
 Array.__radd__ = array_add
 Array.__sub__ = array_sub
@@ -52,3 +58,4 @@ Array.__mul__ = array_mul
 Array.__rmul__ = array_mul
 Array.__truediv__ = array_div
 Array.__rtruediv__ = array_div
+Array.__matmul__ = array_matmul

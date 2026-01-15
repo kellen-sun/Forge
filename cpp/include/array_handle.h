@@ -50,6 +50,16 @@ inline std::shared_ptr<ForgeHandle> get_default_forge() {
     return inst;
 }
 
+inline std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
+    std::vector<int64_t> strides(shape.size());
+    int64_t stride = 1;
+    for (int i = shape.size() - 1; i >= 0; i--) {
+        strides[i] = stride;
+        stride *= shape[i];
+    }
+    return strides;
+}
+
 inline size_t numel_from_shape(const std::vector<int64_t>& shape) {
     size_t n = 1;
     for (auto d : shape) n *= (size_t)d;

@@ -51,17 +51,19 @@ PYBIND11_MODULE(_backend, m) {
 
     // OPERATIONS //
     m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
-        return binops_arrays_cpp(a, b, "add");
+        return array_binops(a, b, "add");
     });
     m.def("sub", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
-        return binops_arrays_cpp(a, b, "sub");
+        return array_binops(a, b, "sub");
     });
     m.def("mul", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
-        return binops_arrays_cpp(a, b, "mul");
+        return array_binops(a, b, "mul");
     });
     m.def("div", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
-        return binops_arrays_cpp(a, b, "div");
+        return array_binops(a, b, "div");
     });
+    m.def("matmul", [](const std::shared_ptr<ArrayHandle>& a,
+                       const std::shared_ptr<ArrayHandle>& b) { return array_matmul(a, b); });
 
     // COMPILE AND RUN //
     // m.def("compile_from_source", &compile_from_source_cpp);
