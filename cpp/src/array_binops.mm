@@ -152,12 +152,12 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     // Compute strides for batch dimensions only (excluding M, N)
     auto get_batch_strides = [&](const std::vector<int64_t>& shape) {
         std::vector<int64_t> strides;
-        int ndim = (int)shape.size();
+        int ndim = shape.size();
         int batch_ndim = ndim - 2;  // Number of batch dims in this tensor
-        int offset = (int)batch_shape.size() - batch_ndim;
+        int offset = batch_shape.size() - batch_ndim;
         auto dense = make_strides(shape);
-        for (size_t i = 0; i < batch_shape.size(); ++i) {
-            int idx = (int)i - offset;
+        for (int i = 0; i < batch_shape.size(); ++i) {
+            int idx = i - offset;
             // If dim missing (idx < 0) or dim is 1 -> Stride is 0 (Broadcast)
             if (idx < 0 || shape[idx] == 1)
                 strides.push_back(0);
@@ -206,8 +206,6 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     // total_ops only counts batch dimensions (not M, N)
     size_t total_ops = 1;
     for (auto s : batch_shape) total_ops *= s;
-    // For 2D matmul with no batch dims, batch_shape is empty, so total_ops = 1
-    if (batch_shape.empty()) total_ops = 1;
 
     std::vector<int> counters(batch_shape.size(), 0);
 
@@ -225,7 +223,7 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
         }
 
         off_c += M * N * dsize;
-        for (int dim = (int)batch_shape.size() - 1; dim >= 0; --dim) {
+        for (int dim = batch_shape.size() - 1; dim >= 0; --dim) {
             counters[dim]++;
             if (counters[dim] == batch_shape[dim]) {
                 counters[dim] = 0;

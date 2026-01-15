@@ -53,7 +53,7 @@ inline std::shared_ptr<ForgeHandle> get_default_forge() {
 inline std::vector<int64_t> make_strides(const std::vector<int64_t>& shape) {
     std::vector<int64_t> strides(shape.size());
     int64_t stride = 1;
-    for (int i = (int)shape.size() - 1; i >= 0; i--) {
+    for (int i = shape.size() - 1; i >= 0; i--) {
         strides[i] = stride;
         stride *= shape[i];
     }
