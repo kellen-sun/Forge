@@ -13,13 +13,14 @@ Make a virtual environment and activate it.
 pip install pytest
 pip install pre-commit
 ```
-To run benchmarks probably will need to pip install other stuff like pytorch, numba, mlx, etc. (tbd)
 
+tools for the backend
 ```
 brew install pybind11
 brew install cmake
 ```
 
+to build the backend
 ```
 mkdir build
 cd build
@@ -36,6 +37,12 @@ to run tests
 ```
 pytest -q
 ```
+
+to run benchmarks
+```
+pip install numpy torch mlx
+```
+
 Every git commit will run the pre-commit code formatter. You can also run it manually with:
 ```
 pre-commit run --all-files
