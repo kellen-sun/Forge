@@ -9,9 +9,8 @@ on:
 jobs:
   test-apple-silicon:
     name: Test on M1 Mac
-    # 'macos-14-xlarge' or 'macos-latest-xlarge' targets the M1 runners
-    runs-on: macos-14-xlarge 
-    
+    runs-on: macos-14
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
