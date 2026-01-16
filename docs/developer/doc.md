@@ -38,9 +38,19 @@ to run tests
 pytest -q
 ```
 
+to run tracer tests only
+```
+pytest tests/test_tracer.py -v
+```
+
 to run benchmarks
 ```
 pip install numpy torch mlx
+```
+
+to run trace benchmark (eager vs traced execution)
+```
+python benchmarks/trace_benchmark.py
 ```
 
 Every git commit will run the pre-commit code formatter. You can also run it manually with:
