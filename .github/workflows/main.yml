@@ -22,7 +22,7 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          pip install --upgrade pip setuptools wheel cmake
+          pip install --upgrade pip setuptools wheel cmake pybind11
 
       - name: Build Backend (CMake)
         run: |
