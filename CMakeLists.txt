@@ -18,6 +18,18 @@ pybind11_add_module(
     cpp/src/metal_utils.mm
 )
 
+if(APPLE)
+    find_library(METAL_LIB Metal)
+    find_library(MPS_LIB MetalPerformanceShaders)
+    find_library(FOUNDATION_LIB Foundation)
+
+    target_link_libraries(_backend PRIVATE
+        ${METAL_LIB}
+        ${MPS_LIB}
+        ${FOUNDATION_LIB}
+    )
+endif()
+
 # Put output in python package
 set_target_properties(_backend PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/py/Forge
