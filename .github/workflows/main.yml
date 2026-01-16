@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake -Dpybind11_DIR=$(python -m pybind11 --cmakedir) ..
           cmake --build .
 
       - name: Install Library
