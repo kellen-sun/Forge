@@ -1,21 +1,52 @@
-import inspect
+import functools
 
-from . import _backend
-from .array import Array
+# from .array import Array
+from . import _backend, graph
+from .graph import Graph, Node
+from .symbolic import SymbolicArray
+
+GRAPH_CACHE = {}
 
 
-class CompiledKernel:
-    def __init__(self, handle):
-        self.handle = handle
-
-    def __call__(self, *args):
-        handles = [a._handle for a in args]
-        return Array.from_handle(_backend.run_kernel(self.handle, handles))
+def _flatten(g, output):
+    node_to_id = {node: i for i, node in enumerate(g.nodes)}
+    flat_nodes = []
+    for node in g.nodes:
+        input_ids = [node_to_id[parent] for parent in node.inputs]
+        flat_nodes.append((node.op, input_ids, node.shape))
+    return flat_nodes, node_to_id[output.node]
 
 
 def forge(fn):
     """Decorator"""
-    src = inspect.getsource(fn)
 
-    handle = _backend.compile_from_source(src)
-    return CompiledKernel(handle)
+    @functools.wraps(fn)
+    def wrapper(*args):
+        input_metas = tuple((x.shape, x.strides) for x in args)
+        cache_key = (id(fn), input_metas)
+        if cache_key in GRAPH_CACHE:
+            backend_graph = GRAPH_CACHE[cache_key]
+        else:
+            print(f"Compiling func {fn.__name__}")
+            g = Graph()
+            graph.CURRENT_GRAPH = g
+            sym_args = []
+            for x in args:
+                input_node = Node("input", [], x.shape)
+                g.add(input_node)
+                sym_args.append(SymbolicArray(input_node))
+            try:
+                # assume for now that output is an Array type for fn
+                # thus caught as a symbolicArray
+                sym_out = fn(*sym_args)
+            finally:
+                graph.CURRENT_GRAPH = None
+
+            flattened_graph = _flatten(g, sym_out)
+            backend_graph = _backend.make_graph(flattened_graph)
+            GRAPH_CACHE[cache_key] = backend_graph
+
+        inputs = [x._handle for x in args]
+        return backend_graph.execute(inputs)
+
+    return wrapper
