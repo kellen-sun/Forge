@@ -1,8 +1,8 @@
 import functools
 
-# from .array import Array
 from . import _backend, graph
-from .graph import Graph, Node
+from .array import Array
+from .graph import Graph, Node, Ops
 from .symbolic import SymbolicArray
 
 GRAPH_CACHE = {}
@@ -32,7 +32,7 @@ def forge(fn):
             graph.CURRENT_GRAPH = g
             sym_args = []
             for x in args:
-                input_node = Node("input", [], x.shape)
+                input_node = Node(Ops.INPUT, [], x.shape)
                 g.add(input_node)
                 sym_args.append(SymbolicArray(input_node))
             try:
@@ -47,6 +47,6 @@ def forge(fn):
             GRAPH_CACHE[cache_key] = backend_graph
 
         inputs = [x._handle for x in args]
-        return backend_graph.execute(inputs)
+        return Array(backend_graph.execute(inputs))
 
     return wrapper
