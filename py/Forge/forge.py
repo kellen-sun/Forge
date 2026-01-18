@@ -13,7 +13,7 @@ def _flatten(g, output):
     flat_nodes = []
     for node in g.nodes:
         input_ids = [node_to_id[parent] for parent in node.inputs]
-        flat_nodes.append((node.op, input_ids, node.shape))
+        flat_nodes.append((node.op, input_ids, node.shape, node.offset, node.strides))
     return flat_nodes, node_to_id[output.node]
 
 
@@ -22,7 +22,7 @@ def forge(fn):
 
     @functools.wraps(fn)
     def wrapper(*args):
-        input_metas = tuple((x.shape, x.strides) for x in args)
+        input_metas = tuple((x.shape, x.offset, x.strides) for x in args)
         cache_key = (id(fn), input_metas)
         if cache_key in GRAPH_CACHE:
             backend_graph = GRAPH_CACHE[cache_key]
@@ -32,7 +32,7 @@ def forge(fn):
             graph.CURRENT_GRAPH = g
             sym_args = []
             for x in args:
-                input_node = Node(Ops.INPUT, [], x.shape)
+                input_node = Node(Ops.INPUT, [], x.shape, x.offset, x.strides)
                 g.add(input_node)
                 sym_args.append(SymbolicArray(input_node))
             try:

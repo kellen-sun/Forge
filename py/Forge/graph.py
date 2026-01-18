@@ -5,15 +5,21 @@ class Ops:
     MUL = 3
     DIV = 4
     SUB = 5
+    RESHAPE = 6
+    TRANSPOSE = 7
 
 
 class Node:
-    __slots__ = ("op", "inputs", "shape")
+    __slots__ = ("op", "inputs", "shape", "offset", "strides")
 
-    def __init__(self, op: int, inputs: list, shape: tuple):
+    def __init__(
+        self, op: int, inputs: list, shape: tuple, offset: int, strides: tuple
+    ):
         self.op = op
         self.inputs = inputs
         self.shape = shape
+        self.offset = offset
+        self.strides = strides
 
 
 class Graph:

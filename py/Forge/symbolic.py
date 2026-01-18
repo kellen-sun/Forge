@@ -1,5 +1,9 @@
+from typing import Sequence, Union
+
 from . import graph
 from .graph import Node, Ops
+from .shape import _deduce_new_shape, _transpose_helper
+from .utils import _default_strides, _indexing_helper
 
 
 def _broadcast_shapes(s1, s2):
@@ -21,6 +25,8 @@ class SymbolicArray:
     def __init__(self, node: Node):
         self.node = node
         self.shape = node.shape
+        self.offset = node.offset
+        self.strides = node.strides
 
     def __add__(self, other):
         return self._binary_op(Ops.ADD, other)
@@ -55,13 +61,71 @@ class SymbolicArray:
             if len(out_shape) > 0:
                 out_shape.pop(col_idx)
         out_shape = tuple(out_shape)
-        new_node = Node(Ops.MATMUL, [self.node, other.node], out_shape)
+        new_node = Node(
+            Ops.MATMUL,
+            [self.node, other.node],
+            out_shape,
+            0,
+            _default_strides(out_shape),
+        )
         if graph.CURRENT_GRAPH:
             graph.CURRENT_GRAPH.add(new_node)
         return SymbolicArray(new_node)
 
     def _binary_op(self, op_code, other):
-        new_node = Node(op_code, [self.node, other.node], self.shape)
+        new_node = Node(
+            op_code,
+            [self.node, other.node],
+            self.shape,
+            0,
+            _default_strides(self.shape),
+        )
         if graph.CURRENT_GRAPH:
             graph.CURRENT_GRAPH.add(new_node)
         return SymbolicArray(new_node)
+
+    def __getitem__(self, key):
+        new_shape, new_strides, new_offset = _indexing_helper(self, key)
+        # TODO
+
+    def __setitem__(self, key, value):
+        new_shape, new_strides, new_offset = _indexing_helper(self, key)
+        # TODO
+
+    def reshape(self, *shape: Union[int, Sequence[int]]):
+        new_shape = _deduce_new_shape(self, *shape)
+        # the new offset depends on if we make a copy
+        # which depends on if the old array was contiguous
+        # if contiguous, we can use the same offset, and just redo strides
+        # if not, a new Array is created in _backend (array_reshape) so offset = 0
+        contiguous = True
+        z = 1
+        for i in range(len(self.shape) - 1, -1, -1):
+            if self.strides[i] != z:
+                contiguous = False
+                break
+            z *= self.shape[i]
+        new_offset = 0
+        if contiguous:
+            new_offset = self.offset
+        new_node = Node(
+            Ops.RESHAPE,
+            [self.node],
+            new_shape,
+            new_offset,
+            _default_strides(new_shape),
+        )
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        return SymbolicArray(new_node)
+
+    def transpose(self, axes: Sequence[int] = None):
+        new_shape, new_strides = _transpose_helper(self, axes)
+        new_node = Node(Ops.TRANSPOSE, [self.node], new_shape, self.offset, new_strides)
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        return SymbolicArray(new_node)
+
+    @property
+    def T(self):
+        return self.transpose()

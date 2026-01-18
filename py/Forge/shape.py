@@ -4,7 +4,7 @@ from . import _backend
 from .array import Array
 
 
-def reshape(self, *shape: Union[int, Sequence[int]]):
+def _deduce_new_shape(self, *shape: Union[int, Sequence[int]]):
     if len(shape) == 1:
         arg = shape[0]
         if isinstance(arg, int):
@@ -35,10 +35,15 @@ def reshape(self, *shape: Union[int, Sequence[int]]):
                 f"Array: cannot reshape array of size {numel} into shape {shape}"
             )
         new_shape = list(shape)
+    return new_shape
+
+
+def reshape(self, *shape: Union[int, Sequence[int]]):
+    new_shape = _deduce_new_shape(self, *shape)
     return Array(_backend.reshape(self._handle, new_shape))
 
 
-def transpose(self, axes: Sequence[int] = None):
+def _transpose_helper(self, axes: Sequence[int] = None):
     if axes is None:
         axes = range(len(self.shape) - 1, -1, -1)
     ndim = len(self.shape)
@@ -50,6 +55,11 @@ def transpose(self, axes: Sequence[int] = None):
         raise ValueError("Array: Tranpose, axes must be a permutation of dimensions")
     new_shape = [self.shape[i] for i in axes]
     new_strides = [self.strides[i] for i in axes]
+    return new_shape, new_strides
+
+
+def transpose(self, axes: Sequence[int] = None):
+    new_shape, new_strides = _transpose_helper(self, axes)
     return Array(_backend.make_view(self._handle, new_shape, new_strides, self.offset))
 
 
