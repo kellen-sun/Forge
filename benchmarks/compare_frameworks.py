@@ -160,7 +160,7 @@ def benchmark_batched():
         # Forge
         forge_a = Array(data_a.tolist())
         forge_b = Array(data_b.tolist())
-        forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0])
+        forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0, 0])
 
         # NumPy
         numpy_time, _ = time_fn(lambda: data_a @ data_b)
@@ -213,7 +213,7 @@ def benchmark_transformer_shapes():
         # Forge
         forge_a = Array(data_a.tolist())
         forge_b = Array(data_b.tolist())
-        forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0])
+        forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0, 0])
 
         # NumPy
         numpy_time, _ = time_fn(lambda: data_a @ data_b)
