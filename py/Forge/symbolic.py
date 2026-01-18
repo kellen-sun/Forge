@@ -23,7 +23,7 @@ class SymbolicArray:
         self.shape = node.shape
 
     def __add__(self, other):
-        self._binary_op(Ops.ADD, other)
+        return self._binary_op(Ops.ADD, other)
 
     def __sub__(self, other):
         return self._binary_op(Ops.SUB, other)
