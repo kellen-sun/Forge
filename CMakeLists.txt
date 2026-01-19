@@ -16,6 +16,7 @@ pybind11_add_module(
     cpp/src/array_binops.mm
     cpp/src/forge_handle.mm
     cpp/src/metal_utils.mm
+    cpp/src/graph_handle.mm
 )
 
 # Put output in python package

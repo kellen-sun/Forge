@@ -7,6 +7,7 @@
 #include "../include/array_handle.h"
 #include "../include/compiler.h"
 #include "../include/forge_handle.h"
+#include "../include/graph_handle.h"
 #include "../include/runtime.h"
 
 namespace py = pybind11;
@@ -24,6 +25,7 @@ PYBIND11_MODULE(_backend, m) {
         .def_property_readonly("strides", [](const ArrayHandle& h) { return h.strides(); })
         .def_property_readonly("offset", [](const ArrayHandle& h) { return h.offset(); })
         .def_property_readonly("data", [](const ArrayHandle& h) { return h.data(); })
+        .def("sync", [](ArrayHandle& h) { h.synchronize(); })
         .def("item", [](ArrayHandle& h) -> float {
             if (!h.shape().empty()) {
                 throw std::runtime_error("item(): can only convert scalar arrays to float");
@@ -64,6 +66,24 @@ PYBIND11_MODULE(_backend, m) {
     });
     m.def("matmul", [](const std::shared_ptr<ArrayHandle>& a,
                        const std::shared_ptr<ArrayHandle>& b) { return array_matmul(a, b); });
+
+    // GRAPH HANDLE //
+    py::class_<GraphHandle, std::shared_ptr<GraphHandle>>(m, "GraphHandle")
+        .def("execute",
+             [](GraphHandle& g, const std::vector<std::shared_ptr<ArrayHandle>>& inputs) {
+                 return g.execute(inputs);
+             })
+        .def_property_readonly("num_nodes", &GraphHandle::num_nodes)
+        .def_property_readonly("output_idx", &GraphHandle::output_idx);
+
+    // make_graph takes (flat_nodes, output_idx) from Python's _flatten()
+    // flat_nodes is a list of (op_code, input_ids, shape, offset, strides) tuples
+    m.def("make_graph",
+          [](std::tuple<std::vector<std::tuple<int, std::vector<int>, std::vector<int64_t>, int64_t, std::vector<int64_t>>>, int>
+                 flat_graph) {
+              auto& [flat_nodes, output_idx] = flat_graph;
+              return make_graph_from_flat(flat_nodes, output_idx);
+          });
 
     // COMPILE AND RUN //
     // m.def("compile_from_source", &compile_from_source_cpp);

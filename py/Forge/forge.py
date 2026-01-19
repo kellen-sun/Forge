@@ -22,7 +22,7 @@ def forge(fn):
 
     @functools.wraps(fn)
     def wrapper(*args):
-        input_metas = tuple((x.shape, x.offset, x.strides) for x in args)
+        input_metas = tuple((x.shape, x.offset, tuple(x.strides)) for x in args)
         cache_key = (id(fn), input_metas)
         if cache_key in GRAPH_CACHE:
             backend_graph = GRAPH_CACHE[cache_key]
