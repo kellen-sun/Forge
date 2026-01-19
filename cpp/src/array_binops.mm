@@ -207,32 +207,120 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     size_t total_ops = 1;
     for (auto s : batch_shape) total_ops *= s;
 
-    std::vector<int> counters(batch_shape.size(), 0);
+    // For non-batched case (total_ops == 1), use MPS single encoding
+    if (total_ops == 1) {
+        size_t off_a = a->offset() * dsize;
+        size_t off_b = b->offset() * dsize;
+        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
+        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:bufB offset:off_b descriptor:descB];
+        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:bufC offset:0 descriptor:descC];
+        [kernel encodeToCommandBuffer:cmd leftMatrix:matA rightMatrix:matB resultMatrix:matC];
+    } else {
+        // Batched case: check if we can use custom tiled kernel
+        // Conditions: no transpose, no broadcasting, contiguous batch dimension
+        bool can_use_custom_kernel = !trans_a && !trans_b && batch_shape.size() == 1;
 
-    size_t off_a = a->offset() * dsize;
-    size_t off_b = b->offset() * dsize;
-    size_t off_c = 0;
-
-    // Loop only over batch dimensions
-    for (size_t op = 0; op < total_ops; ++op) {
-        @autoreleasepool {
-            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
-            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:bufB offset:off_b descriptor:descB];
-            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:bufC offset:off_c descriptor:descC];
-            [kernel encodeToCommandBuffer:cmd leftMatrix:matA rightMatrix:matB resultMatrix:matC];
+        // Check for broadcasting (any zero strides means broadcasting)
+        for (auto s : str_a) {
+            if (s == 0) can_use_custom_kernel = false;
+        }
+        for (auto s : str_b) {
+            if (s == 0) can_use_custom_kernel = false;
         }
 
-        off_c += M * N * dsize;
-        for (int dim = batch_shape.size() - 1; dim >= 0; --dim) {
-            counters[dim]++;
-            if (counters[dim] == batch_shape[dim]) {
-                counters[dim] = 0;
-                off_a -= (batch_shape[dim] - 1) * str_a[dim] * dsize;
-                off_b -= (batch_shape[dim] - 1) * str_b[dim] * dsize;
-            } else {
-                off_a += str_a[dim] * dsize;
-                off_b += str_b[dim] * dsize;
-                break;
+        // Heuristic: use custom kernel when batch overhead dominates
+        // For large matrices, MPS is highly optimized and faster
+        // For small matrices with many batches, custom kernel reduces overhead
+        int64_t matrix_size = M * K + K * N;  // approximate work per batch
+        bool small_matrices = matrix_size < 256 * 256;  // threshold
+        bool many_batches = total_ops >= 8;
+        can_use_custom_kernel = can_use_custom_kernel && small_matrices && many_batches;
+
+        if (can_use_custom_kernel) {
+            // Use custom tiled batched GEMM kernel - single GPU dispatch for all batches
+            id<MTLComputePipelineState> pipeline =
+                get_pipeline("batched_matmul_tiled", ELEMENTWISE_METAL_SOURCE);
+
+            id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+            [enc setComputePipelineState:pipeline];
+            [enc setBuffer:bufA offset:a->offset() * dsize atIndex:0];
+            [enc setBuffer:bufB offset:b->offset() * dsize atIndex:1];
+            [enc setBuffer:bufC offset:0 atIndex:2];
+            [enc setBytes:&M length:sizeof(long) atIndex:3];
+            [enc setBytes:&K length:sizeof(long) atIndex:4];
+            [enc setBytes:&N length:sizeof(long) atIndex:5];
+            long batch_size = total_ops;
+            [enc setBytes:&batch_size length:sizeof(long) atIndex:6];
+            long stride_a = M * K;
+            long stride_b = K * N;
+            long stride_c = M * N;
+            [enc setBytes:&stride_a length:sizeof(long) atIndex:7];
+            [enc setBytes:&stride_b length:sizeof(long) atIndex:8];
+            [enc setBytes:&stride_c length:sizeof(long) atIndex:9];
+
+            // Dispatch with tiled threadgroups
+            const uint TILE_SIZE = 16;
+            MTLSize threadsPerGroup = MTLSizeMake(TILE_SIZE, TILE_SIZE, 1);
+            MTLSize numGroups = MTLSizeMake((N + TILE_SIZE - 1) / TILE_SIZE,
+                                            (M + TILE_SIZE - 1) / TILE_SIZE, total_ops);
+            [enc dispatchThreadgroups:numGroups threadsPerThreadgroup:threadsPerGroup];
+            [enc endEncoding];
+        } else {
+            // Fall back to MPS for complex cases (transpose, broadcasting)
+            // Pre-compute all offsets first
+            std::vector<size_t> offsets_a(total_ops);
+            std::vector<size_t> offsets_b(total_ops);
+            std::vector<size_t> offsets_c(total_ops);
+
+            std::vector<int> counters(batch_shape.size(), 0);
+            size_t off_a = a->offset() * dsize;
+            size_t off_b = b->offset() * dsize;
+            size_t off_c = 0;
+
+            for (size_t op = 0; op < total_ops; ++op) {
+                offsets_a[op] = off_a;
+                offsets_b[op] = off_b;
+                offsets_c[op] = off_c;
+
+                off_c += M * N * dsize;
+                for (int dim = batch_shape.size() - 1; dim >= 0; --dim) {
+                    counters[dim]++;
+                    if (counters[dim] == batch_shape[dim]) {
+                        counters[dim] = 0;
+                        off_a -= (batch_shape[dim] - 1) * str_a[dim] * dsize;
+                        off_b -= (batch_shape[dim] - 1) * str_b[dim] * dsize;
+                    } else {
+                        off_a += str_a[dim] * dsize;
+                        off_b += str_b[dim] * dsize;
+                        break;
+                    }
+                }
+            }
+
+            // Pre-allocate all MPSMatrix objects upfront
+            @autoreleasepool {
+                std::vector<MPSMatrix*> matricesA(total_ops);
+                std::vector<MPSMatrix*> matricesB(total_ops);
+                std::vector<MPSMatrix*> matricesC(total_ops);
+
+                for (size_t op = 0; op < total_ops; ++op) {
+                    matricesA[op] = [[MPSMatrix alloc] initWithBuffer:bufA
+                                                               offset:offsets_a[op]
+                                                           descriptor:descA];
+                    matricesB[op] = [[MPSMatrix alloc] initWithBuffer:bufB
+                                                               offset:offsets_b[op]
+                                                           descriptor:descB];
+                    matricesC[op] = [[MPSMatrix alloc] initWithBuffer:bufC
+                                                               offset:offsets_c[op]
+                                                           descriptor:descC];
+                }
+
+                for (size_t op = 0; op < total_ops; ++op) {
+                    [kernel encodeToCommandBuffer:cmd
+                                       leftMatrix:matricesA[op]
+                                      rightMatrix:matricesB[op]
+                                     resultMatrix:matricesC[op]];
+                }
             }
         }
     }

@@ -60,8 +60,8 @@ def benchmark_square_matrices():
         data_b = np.random.rand(n, n).astype(np.float32)
 
         # Forge
-        forge_a = Array(data_a.tolist())
-        forge_b = Array(data_b.tolist())
+        forge_a = Array(data_a)
+        forge_b = Array(data_b)
         forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0])
 
         # NumPy
@@ -109,8 +109,8 @@ def benchmark_rectangular_matrices():
         data_b = np.random.rand(k, n).astype(np.float32)
 
         # Forge
-        forge_a = Array(data_a.tolist())
-        forge_b = Array(data_b.tolist())
+        forge_a = Array(data_a)
+        forge_b = Array(data_b)
         forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0])
 
         # NumPy
@@ -158,8 +158,8 @@ def benchmark_batched():
         data_b = np.random.rand(batch, n, m).astype(np.float32)
 
         # Forge
-        forge_a = Array(data_a.tolist())
-        forge_b = Array(data_b.tolist())
+        forge_a = Array(data_a)
+        forge_b = Array(data_b)
         forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0, 0])
 
         # NumPy
@@ -211,8 +211,8 @@ def benchmark_transformer_shapes():
         data_b = np.random.rand(*shape_b).astype(np.float32)
 
         # Forge
-        forge_a = Array(data_a.tolist())
-        forge_b = Array(data_b.tolist())
+        forge_a = Array(data_a)
+        forge_b = Array(data_b)
         forge_time, _ = time_fn(lambda: (forge_a @ forge_b)[0, 0, 0])
 
         # NumPy

@@ -1,6 +1,8 @@
 from array import array
 from typing import Sequence
 
+import numpy as np
+
 from . import _backend
 from .utils import _indexing_helper
 
@@ -78,14 +80,25 @@ class Array:
             self.shape = shape
             return
 
-        else:
-            # Nested Python lists/tuples
-            shape, flat = _infer_shape_and_flatten(data)
-            buf = array("f", flat)
-            mv = memoryview(buf)
+        if isinstance(data, np.ndarray):
+            # NumPy array - fast path using buffer protocol
+            if data.dtype != np.float32:
+                data = data.astype(np.float32)
+            # Ensure contiguous C-order array
+            if not data.flags["C_CONTIGUOUS"]:
+                data = np.ascontiguousarray(data)
+            shape = data.shape
+            mv = memoryview(data)
             self._handle = _backend.create_array_from_buffer(mv, list(shape))
-            self.shape = shape
+            self.shape = tuple(shape)
             return
+
+        # Nested Python lists/tuples (slow path)
+        shape, flat = _infer_shape_and_flatten(data)
+        buf = array("f", flat)
+        mv = memoryview(buf)
+        self._handle = _backend.create_array_from_buffer(mv, list(shape))
+        self.shape = shape
 
     @classmethod
     def from_buffer(cls, buf, shape: Sequence[int]):
