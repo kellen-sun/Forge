@@ -21,6 +21,15 @@ def _broadcast_shapes(s1, s2):
     return tuple(out_shape)
 
 
+def _lift(x):
+    if isinstance(x, SymbolicArray):
+        return x
+    node = Node(Ops.CONSTANT, [], (1,), 0, (1,), args=(float(x),))
+    if graph.CURRENT_GRAPH:
+        graph.CURRENT_GRAPH.add(node)
+    return SymbolicArray(node)
+
+
 class SymbolicArray:
     def __init__(self, node: Node):
         self.node = node
@@ -41,6 +50,7 @@ class SymbolicArray:
         return self._binary_op(Ops.DIV, other)
 
     def __matmul__(self, other):
+        other = _lift(other)
         ndim_a = len(self.shape)
         ndim_b = len(other.shape)
         shape_a = self.shape
@@ -73,6 +83,7 @@ class SymbolicArray:
         return SymbolicArray(new_node)
 
     def _binary_op(self, op_code, other):
+        other = _lift(other)
         out_shape = _broadcast_shapes(self.shape, other.shape)
         new_node = Node(
             op_code,
@@ -93,6 +104,7 @@ class SymbolicArray:
         return SymbolicArray(new_node)
 
     def __setitem__(self, key, value):
+        value = _lift(value)
         new_shape, new_strides, new_offset = _indexing_helper(self, key)
         new_node = Node(
             Ops.VIEW,

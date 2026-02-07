@@ -9,6 +9,7 @@ class Ops:
     TRANSPOSE = 7
     VIEW = 8
     UPDATE = 9
+    CONSTANT = 10
 
 
 class Node:
