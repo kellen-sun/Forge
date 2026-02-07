@@ -73,12 +73,13 @@ class SymbolicArray:
         return SymbolicArray(new_node)
 
     def _binary_op(self, op_code, other):
+        out_shape = _broadcast_shapes(self.shape, other.shape)
         new_node = Node(
             op_code,
             [self.node, other.node],
-            self.shape,
+            out_shape,
             0,
-            _default_strides(self.shape),
+            _default_strides(out_shape),
         )
         if graph.CURRENT_GRAPH:
             graph.CURRENT_GRAPH.add(new_node)
@@ -86,11 +87,24 @@ class SymbolicArray:
 
     def __getitem__(self, key):
         new_shape, new_strides, new_offset = _indexing_helper(self, key)
-        # TODO
+        new_node = Node(Ops.VIEW, [self.node], new_shape, new_offset, new_strides)
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        return SymbolicArray(new_node)
 
     def __setitem__(self, key, value):
         new_shape, new_strides, new_offset = _indexing_helper(self, key)
-        # TODO
+        new_node = Node(
+            Ops.VIEW,
+            [self.node, value.node],
+            self.shape,
+            self.offset,
+            self.strides,
+            args=(new_shape, new_strides, new_offset),
+        )
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        self.node = new_node
 
     def reshape(self, *shape: Union[int, Sequence[int]]):
         new_shape = _deduce_new_shape(self, *shape)
