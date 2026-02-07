@@ -38,12 +38,13 @@ def forge(fn):
             try:
                 # assume for now that output is an Array type for fn
                 # thus caught as a symbolicArray
+                # TODO: Support return multiple Array/constants or other types
                 sym_out = fn(*sym_args)
             finally:
                 graph.CURRENT_GRAPH = None
 
-            flattened_graph = _flatten(g, sym_out)
-            backend_graph = _backend.make_graph(flattened_graph)
+            flat_nodes, output_index = _flatten(g, sym_out)
+            backend_graph = _backend.make_graph(flat_nodes, output_index)
             GRAPH_CACHE[cache_key] = backend_graph
 
         inputs = [x._handle for x in args]
