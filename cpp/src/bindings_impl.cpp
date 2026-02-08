@@ -3,6 +3,8 @@
 #include <pybind11/stl.h>
 
 #include "../include/array_handle.h"
+#include "../include/compiler.h"
+#include "../include/graph.h"
 
 namespace py = pybind11;
 
@@ -48,4 +50,38 @@ py::object array_to_list(const ArrayHandle& h) {
         }
     };
     return build(0, h.offset());
+}
+
+std::shared_ptr<Graph> make_graph_wrapper(py::list flat_nodes, int output_index) {
+    std::vector<Node> nodes;
+    nodes.reserve(flat_nodes.size());
+
+    for (auto handle : flat_nodes) {
+        auto t = handle.cast<py::tuple>();
+
+        Node n;
+        n.op = static_cast<OpCode>(t[0].cast<int>());
+        n.inputs = t[1].cast<std::vector<int>>();
+        n.shape = t[2].cast<std::vector<uint64_t>>();
+        n.offset = t[3].cast<uint64_t>();
+        n.strides = t[4].cast<std::vector<uint64_t>>();
+
+        py::tuple py_args = t[5].cast<py::tuple>();
+        // different operation add more later, if they take args
+        // consider using a switch statement
+        if (n.op == OpCode::UPDATE) {
+            // py_args = (shape, strides, offset)
+            auto s = py_args[0].cast<std::vector<uint64_t>>();
+            auto st = py_args[1].cast<std::vector<uint64_t>>();
+            uint64_t off = py_args[2].cast<uint64_t>();
+            // flatten
+            n.args.insert(n.args.end(), s.begin(), s.end());
+            n.args.insert(n.args.end(), st.begin(), st.end());
+            n.args.push_back(off);
+        }
+        nodes.push_back(n);
+    }
+
+    std::vector<Node> optimized_nodes = compile(nodes);
+    return std::make_shared<Graph>(std::move(optimized_nodes), output_index);
 }

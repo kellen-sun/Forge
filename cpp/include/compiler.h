@@ -1,4 +1,4 @@
 #pragma once
-#include "forge_handle.h"
+#include "graph.h"
 
-std::unique_ptr<ForgeHandle> compile_from_source_cpp(const std::string& src);
+std::vector<Node> compile(std::vector<Node> raw_nodes);

@@ -11,3 +11,5 @@ std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::ve
                                                          ForgeHandle* FH);
 
 py::object array_to_list(const ArrayHandle& h);
+
+std::shared_ptr<Graph> make_graph_wrapper(py::list flat_nodes, int output_index);

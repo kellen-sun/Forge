@@ -1,5 +1,3 @@
-#include "../include/runtime.h"
+#include "graph.h"
 
-#include <vector>
-
-#include "../include/forge_handle.h"
+std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHandle>> inputs) {}

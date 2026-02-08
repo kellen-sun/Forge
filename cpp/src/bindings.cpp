@@ -7,6 +7,7 @@
 #include "../include/array_handle.h"
 #include "../include/compiler.h"
 #include "../include/forge_handle.h"
+#include "../include/graph.h"
 #include "../include/runtime.h"
 
 namespace py = pybind11;
@@ -66,6 +67,6 @@ PYBIND11_MODULE(_backend, m) {
                        const std::shared_ptr<ArrayHandle>& b) { return array_matmul(a, b); });
 
     // COMPILE AND RUN //
-    // m.def("compile_from_source", &compile_from_source_cpp);
-    // m.def("run_kernel", &run_kernel_cpp);
+    py::class_<Graph, std::shared_ptr<Graph>>(m, "Graph").def("execute", &Graph::execute);
+    m.def("make_graph", &make_graph_wrapper);
 }
