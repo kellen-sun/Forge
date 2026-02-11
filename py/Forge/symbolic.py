@@ -132,11 +132,22 @@ class SymbolicArray:
                 break
             z *= self.shape[i]
         new_offset = 0
+        cur_node = self.node
         if contiguous:
             new_offset = self.offset
+        else:
+            cur_node = Node(
+                Ops.COPY,
+                [self.node],
+                self.shape,
+                new_offset,
+                _default_strides(self.shape),
+            )
+            if graph.CURRENT_GRAPH:
+                graph.CURRENT_GRAPH.add(cur_node)
         new_node = Node(
             Ops.RESHAPE,
-            [self.node],
+            [cur_node],
             new_shape,
             new_offset,
             _default_strides(new_shape),

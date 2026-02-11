@@ -10,6 +10,7 @@ class Ops:
     VIEW = 8
     UPDATE = 9
     CONSTANT = 10
+    COPY = 11
 
 
 class Node:
