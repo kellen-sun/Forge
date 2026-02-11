@@ -62,9 +62,9 @@ std::shared_ptr<Graph> make_graph_wrapper(py::list flat_nodes, int output_index)
         Node n;
         n.op = static_cast<OpCode>(t[0].cast<int>());
         n.inputs = t[1].cast<std::vector<int>>();
-        n.shape = t[2].cast<std::vector<uint64_t>>();
-        n.offset = t[3].cast<uint64_t>();
-        n.strides = t[4].cast<std::vector<uint64_t>>();
+        n.shape = t[2].cast<std::vector<int64_t>>();
+        n.offset = t[3].cast<int64_t>();
+        n.strides = t[4].cast<std::vector<int64_t>>();
 
         py::tuple py_args = t[5].cast<py::tuple>();
         // different operation add more later, if they take args

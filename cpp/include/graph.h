@@ -8,12 +8,12 @@
 struct Node {
     OpCode op;
     std::vector<int> inputs;
-    std::vector<uint64_t> shape;
-    std::vector<uint64_t> strides;
-    uint64_t offset;
+    std::vector<int64_t> shape;
+    std::vector<int64_t> strides;
+    int64_t offset;
 
     // Flatten args
-    std::vector<uint64_t> args;
+    std::vector<int64_t> args;
 };
 
 class Graph {
