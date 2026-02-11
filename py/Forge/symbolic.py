@@ -107,7 +107,7 @@ class SymbolicArray:
         value = _lift(value)
         new_shape, new_strides, new_offset = _indexing_helper(self, key)
         new_node = Node(
-            Ops.VIEW,
+            Ops.UPDATE,
             [self.node, value.node],
             self.shape,
             self.offset,
