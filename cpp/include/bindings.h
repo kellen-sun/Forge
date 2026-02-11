@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include "array_handle.h"
+#include "graph.h"
 
 namespace py = pybind11;
 

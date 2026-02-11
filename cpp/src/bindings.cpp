@@ -8,7 +8,6 @@
 #include "../include/compiler.h"
 #include "../include/forge_handle.h"
 #include "../include/graph.h"
-#include "../include/runtime.h"
 
 namespace py = pybind11;
 

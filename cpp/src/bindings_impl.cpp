@@ -82,6 +82,7 @@ std::shared_ptr<Graph> make_graph_wrapper(py::list flat_nodes, int output_index)
         nodes.push_back(n);
     }
 
-    std::vector<Node> optimized_nodes = compile(nodes);
+    std::vector<Node> optimized_nodes = optimize_graph(nodes);
+    // possible that output_index changes after compiling no?
     return std::make_shared<Graph>(std::move(optimized_nodes), output_index);
 }

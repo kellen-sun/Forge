@@ -3,7 +3,6 @@
 
 #include "../include/array_handle.h"
 #include "../include/forge_handle.h"
-#include "../include/runtime.h"
 
 struct ForgeHandle::Impl {
     id<MTLDevice> device;

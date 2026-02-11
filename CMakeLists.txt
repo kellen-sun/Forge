@@ -12,6 +12,8 @@ pybind11_add_module(
     _backend
     cpp/src/bindings.cpp
     cpp/src/bindings_impl.cpp
+    cpp/src/compiler.cpp
+    cpp/src/runtime.cpp
     cpp/src/array_handle.mm
     cpp/src/array_binops.mm
     cpp/src/forge_handle.mm
