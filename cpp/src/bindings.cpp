@@ -67,5 +67,5 @@ PYBIND11_MODULE(_backend, m) {
 
     // COMPILE AND RUN //
     py::class_<Graph, std::shared_ptr<Graph>>(m, "Graph").def("execute", &Graph::execute);
-    m.def("make_graph", &make_graph_wrapper);
+    m.def("make_graph", &make_graph);
 }

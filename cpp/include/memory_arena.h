@@ -11,6 +11,7 @@ class MemoryArena {
 
    public:
     // CONSTRUCTORS //
+    MemoryArena();
     MemoryArena(const Graph& graph, uint64_t element_size = 4);
 
     // ACCESSORS //
