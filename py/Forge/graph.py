@@ -1,0 +1,45 @@
+class Ops:
+    INPUT = 0
+    MATMUL = 1
+    ADD = 2
+    MUL = 3
+    DIV = 4
+    SUB = 5
+    RESHAPE = 6
+    TRANSPOSE = 7
+    VIEW = 8
+    UPDATE = 9
+    CONSTANT = 10
+    COPY = 11
+
+
+class Node:
+    __slots__ = ("op", "inputs", "shape", "offset", "strides", "args")
+
+    def __init__(
+        self,
+        op: int,
+        inputs: list,
+        shape: tuple,
+        offset: int,
+        strides: tuple,
+        args=None,
+    ):
+        self.op = op
+        self.inputs = inputs
+        self.shape = shape
+        self.offset = offset
+        self.strides = strides
+        self.args = args if args is not None else ()
+
+
+class Graph:
+    def __init__(self):
+        self.nodes = []
+
+    def add(self, node: Node):
+        self.nodes.append(node)
+        return node
+
+
+CURRENT_GRAPH = None
