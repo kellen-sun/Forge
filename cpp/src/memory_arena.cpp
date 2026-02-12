@@ -28,18 +28,64 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
         }
     }
     last_use[roots[graph.output_index]] = INT_MAX;
+
     // 3. Simulate allocation, and frees using greedy best-fit
     // Walk through nodes in graph, if not enough memory available allocate more
     // Recycle dead memory, return the peak usage and offsets
-    // If an UPDATE is also its last use, we can edit the data in place, else, need to make a copy
-    // for example: x_old = x
-    //              x[0] = 5            # Node 2 (UPDATE) -> needs to be a copy
-    //              y = x_old + 2
-    // Question is: Do we make Copy or Not, whats easier to support
-    // If we don't make a copy, we alias track (using the roots), are we guaranteed they're the same
-    // node? And points back to same parent? Applies to reshape and transpose as well, we can take a
-    // (1,5) arr reshape to (5,1) edit a value, does the original change? (aka: did we make a copy)
-    // -> in numpy no COPY seems like the easier model, when a setitem/UPDATE opcode is applied to
-    // an object it fully dies (along with all the references to it) and they all become refs to the
-    // new obj
+    // Note: we basically never make a copy of the data for transpose,reshape, view, even UPDATE
+    // except for reshape when not contiguous i think
+    // we just change in place the data and provide a new view
+    // so that if we have y = x, then change x, y also changes. y is a reference to it, a view
+    // unless we do y = x.copy() or smth, we can provide .copy() support later
+    // along with .list(), which would return the python list and allow us
+    // to copy by inserting the constant list as a new INPUT in the graph.
+    // (so will need support for constants)
+    // one issue to beware of later is synchronization of the kernels, if we have y a ref of x
+    // then we gotta make sure we dont have readwrite race conditions
+    struct FreeBlock {
+        uint64_t offset;
+        uint64_t size;
+    };
+    uint64_t peak_memory = 0;
+    std::vector<FreeBlock> free_blocks;
+    node_offsets.resize(num_nodes);
+
+    for (size_t i = 0; i < num_nodes; ++i) {
+        if (roots[i] != i) {
+            node_offsets[i] = node_offsets[roots[i]];
+            continue;
+        }
+
+        uint64_t size = sizes[i];
+        int best_fit = -1;
+        uint64_t min_waste = UINT64_MAX;
+        for (int b = 0; b < free_blocks.size(); ++b) {
+            if (free_blocks[b].size >= size) {
+                uint64_t waste = free_blocks[b].size - size;
+                if (waste < min_waste) {
+                    min_waste = waste;
+                    best_fit = b;
+                }
+            }
+        }
+        if (best_fit == -1) {
+            node_offsets[i] = peak_memory;
+            peak_memory += size;
+        } else {
+            node_offsets[i] = free_blocks[best_fit].offset;
+            free_blocks[best_fit].offset += size;
+            free_blocks[best_fit].size -= size;
+            if (free_blocks[best_fit].size == 0) free_blocks.erase(free_blocks.begin() + best_fit);
+        }
+
+        // Could potentially be optimized by keeping track of a list
+        // O(N^2) to O(N)
+        for (size_t r = 0; r <= i; ++r) {
+            if (roots[r] == r && last_use[r] == i) {
+                free_blocks.emplace_back(node_offsets[r], sizes[r]);
+            }
+        }
+    }
+
+    this->total_bytes = peak_memory;
 }
