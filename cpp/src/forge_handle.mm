@@ -14,9 +14,6 @@ struct ForgeHandle::Impl {
     }
 };
 
-// TODO: Delete this constructor?
-ForgeHandle::ForgeHandle(const std::string& ir) : ir_repr_(std::move(ir)) {}
-
 ForgeHandle::ForgeHandle() : impl(std::make_unique<Impl>()) {
     @autoreleasepool {
         impl->device = MTLCreateSystemDefaultDevice();

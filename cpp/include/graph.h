@@ -32,9 +32,8 @@ class Graph {
 
     std::shared_ptr<MemoryArena> arena;
 
-    // Metal Source Code
+    // Metal Source Code and configs
     std::string shader_source;
-    // One config per graph node
     std::vector<KernelConfig> configs;
 
     // CONSTRUCTORS //
