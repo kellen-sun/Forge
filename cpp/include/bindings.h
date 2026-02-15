@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include "array_handle.h"
+#include "graph.h"
 
 namespace py = pybind11;
 
@@ -11,3 +12,7 @@ std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::ve
                                                          ForgeHandle* FH);
 
 py::object array_to_list(const ArrayHandle& h);
+
+std::shared_ptr<Graph> parse_nodes(py::list flat_nodes, int output_index);
+
+std::shared_ptr<Graph> make_graph(py::list flat_nodes, int output_index);

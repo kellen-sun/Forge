@@ -1,4 +1,6 @@
 #pragma once
-#include "forge_handle.h"
+#include "graph.h"
 
-std::unique_ptr<ForgeHandle> compile_from_source_cpp(const std::string& src);
+std::vector<Node> optimize_graph(std::vector<Node> raw_nodes);
+
+void generateKernels(Graph& graph);

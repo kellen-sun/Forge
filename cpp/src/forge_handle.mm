@@ -3,7 +3,6 @@
 
 #include "../include/array_handle.h"
 #include "../include/forge_handle.h"
-#include "../include/runtime.h"
 
 struct ForgeHandle::Impl {
     id<MTLDevice> device;
@@ -14,9 +13,6 @@ struct ForgeHandle::Impl {
         queue = [device newCommandQueue];
     }
 };
-
-// TODO: Delete this constructor?
-ForgeHandle::ForgeHandle(const std::string& ir) : ir_repr_(std::move(ir)) {}
 
 ForgeHandle::ForgeHandle() : impl(std::make_unique<Impl>()) {
     @autoreleasepool {

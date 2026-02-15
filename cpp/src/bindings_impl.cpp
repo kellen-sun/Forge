@@ -3,6 +3,9 @@
 #include <pybind11/stl.h>
 
 #include "../include/array_handle.h"
+#include "../include/compiler.h"
+#include "../include/graph.h"
+#include "../include/memory_arena.h"
 
 namespace py = pybind11;
 
@@ -48,4 +51,53 @@ py::object array_to_list(const ArrayHandle& h) {
         }
     };
     return build(0, h.offset());
+}
+
+std::vector<Node> parse_nodes(py::list flat_nodes) {
+    std::vector<Node> nodes;
+    nodes.reserve(flat_nodes.size());
+
+    for (auto handle : flat_nodes) {
+        auto t = handle.cast<py::tuple>();
+
+        Node n;
+        n.op = static_cast<OpCode>(t[0].cast<int>());
+        n.inputs = t[1].cast<std::vector<int>>();
+        n.shape = t[2].cast<std::vector<int64_t>>();
+        n.offset = t[3].cast<int64_t>();
+        n.strides = t[4].cast<std::vector<int64_t>>();
+
+        py::tuple py_args = t[5].cast<py::tuple>();
+        // different operation add more later, if they take args
+        // consider using a switch statement
+        if (n.op == OpCode::UPDATE) {
+            // py_args = (shape, strides, offset)
+            auto s = py_args[0].cast<std::vector<uint64_t>>();
+            auto st = py_args[1].cast<std::vector<uint64_t>>();
+            uint64_t off = py_args[2].cast<uint64_t>();
+            // flatten
+            n.args.insert(n.args.end(), s.begin(), s.end());
+            n.args.insert(n.args.end(), st.begin(), st.end());
+            n.args.push_back(off);
+        }
+        nodes.push_back(n);
+    }
+    return nodes;
+}
+
+std::shared_ptr<Graph> make_graph(py::list flat_nodes, int output_index) {
+    // 1. Get the basic graph
+    std::vector<Node> raw_nodes = parse_nodes(flat_nodes);
+    // 2. Optimize graph
+    std::vector<Node> optimized_nodes = optimize_graph(raw_nodes);
+    // 3. Make graph
+    // possible that output_index changes after compiling no?
+    auto graph = std::make_shared<Graph>(std::move(optimized_nodes), output_index);
+    // 4. Get shared memory map (with some Data struct)
+    graph->arena = std::make_shared<MemoryArena>(*graph);
+    // 5. Compile Graph, to get strings of the relevant kernels and associated info
+    generateKernels(*graph);
+    // 6. Pre-Compile Metal (MSL -> MTLLibrary)
+
+    return graph;
 }
