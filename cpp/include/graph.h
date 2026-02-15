@@ -36,9 +36,13 @@ class Graph {
     std::string shader_source;
     std::vector<KernelConfig> configs;
 
+    void* pipeline;
+
     // CONSTRUCTORS //
     Graph(std::vector<Node> nodes, int output_index)
         : nodes(std::move(nodes)), output_index(output_index) {}
+
+    ~Graph();
 
     std::shared_ptr<ArrayHandle> execute(std::vector<std::shared_ptr<ArrayHandle>> inputs);
 };

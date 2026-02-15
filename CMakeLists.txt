@@ -10,15 +10,16 @@ find_package(pybind11 REQUIRED)
 
 pybind11_add_module(
     _backend
+    cpp/src/array_binops.mm
+    cpp/src/array_handle.mm
     cpp/src/bindings.cpp
     cpp/src/bindings_impl.cpp
     cpp/src/compiler.cpp
-    cpp/src/runtime.cpp
-    cpp/src/memory_arena.cpp
-    cpp/src/array_handle.mm
-    cpp/src/array_binops.mm
+    cpp/src/compiler.mm
     cpp/src/forge_handle.mm
+    cpp/src/memory_arena.cpp
     cpp/src/metal_utils.mm
+    cpp/src/runtime.cpp
 )
 
 # Put output in python package
@@ -28,7 +29,7 @@ set_target_properties(_backend PROPERTIES
 
 target_link_libraries(_backend PRIVATE
     "-framework Metal"
-    "-framework Foundation"
+    # "-framework Foundation"
 )
 target_compile_options(_backend PRIVATE
     "-fobjc-arc"

@@ -6,8 +6,8 @@
 #include "../include/metal_utils.h"
 
 ArrayStorage::~ArrayStorage() {
-    if (metal_buffer_) CFRelease(metal_buffer_);
-    if (write_event_) CFRelease(write_event_);
+    if (metal_buffer_) id old_buffer = (__bridge_transfer id)metal_buffer_;
+    if (write_event_) id old_event = (__bridge_transfer id)write_event_;
 }
 
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
@@ -62,9 +62,9 @@ std::span<const float> ArrayHandle::data() const { return const_cast<ArrayHandle
 
 void ArrayHandle::set_event(void* event) {
     if (storage_->write_event_ == event) return;
-    if (storage_->write_event_) CFRelease(storage_->write_event_);
+    if (storage_->write_event_) id old_event = (__bridge_transfer id)storage_->write_event_;
     if (event)
-        storage_->write_event_ = (void*)CFRetain(event);
+        storage_->write_event_ = (__bridge_retained void*)(__bridge id)event;
     else
         storage_->write_event_ = nullptr;
 }
@@ -116,7 +116,7 @@ void ArrayHandle::synchronize() {
     if (!storage_->write_event_) return;
     id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)storage_->write_event_;
     [cmd waitUntilCompleted];
-    CFRelease(storage_->write_event_);
+    id cmd_to_release = (__bridge_transfer id)storage_->write_event_;
     storage_->write_event_ = nullptr;
 }
 
