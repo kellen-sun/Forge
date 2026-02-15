@@ -38,6 +38,11 @@ to run tests
 pytest -q
 ```
 
+sometimes we need to validate Metal Buffer uses, so add this environment variable (only checks if buffer accesses are correct, in range, etc. not leaks)
+```
+MTL_DEBUG_LAYER=1 pytest -q
+```
+
 to run benchmarks
 ```
 pip install numpy torch mlx

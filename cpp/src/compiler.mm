@@ -8,9 +8,9 @@ void compile_metal(Graph& graph) {
     id<MTLDevice> device = (__bridge id<MTLDevice>)get_default_forge()->device_ptr();
     NSString* source = [NSString stringWithUTF8String:graph.shader_source.c_str()];
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-    // options.fastMathEnabled = YES;
+    options.fastMathEnabled = YES;
     NSError* err = nil;
-    id<MTLLibrary> library = [device newLibraryWithSource:source options:nil error:&err];
+    id<MTLLibrary> library = [device newLibraryWithSource:source options:options error:&err];
     if (err) {
         NSLog(@"Library compilation failed: %@", [err localizedDescription]);
         if (!library) {
