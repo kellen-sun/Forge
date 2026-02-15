@@ -56,6 +56,7 @@ class Array:
             # Existing Array
             self._handle = data._handle
             self.shape = data.shape
+            self._keep = data
             return
 
         try:
@@ -76,12 +77,14 @@ class Array:
             mv = memoryview(data)
             self._handle = _backend.create_array_from_buffer(mv, list(shape))
             self.shape = shape
+            self._keep = data
             return
 
         else:
             # Nested Python lists/tuples
             shape, flat = _infer_shape_and_flatten(data)
             buf = array("f", flat)
+            self._keep = buf
             mv = memoryview(buf)
             self._handle = _backend.create_array_from_buffer(mv, list(shape))
             self.shape = shape

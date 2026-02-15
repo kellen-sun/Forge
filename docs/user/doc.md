@@ -19,6 +19,7 @@ to build the backend (with venv activated, to be able to find the nanobind cmake
 mkdir build
 cd build
 cmake ..
+cmake -DBUILD_TYPE=Release .
 cmake --build .
 ```
 

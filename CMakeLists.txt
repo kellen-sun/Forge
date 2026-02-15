@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(forge_backend LANGUAGES C CXX OBJC OBJCXX)
+if(NOT BUILD_TYPE)
+    set(BUILD_TYPE Release CACHE STRING "Choose the type of build.")
+endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 20)
@@ -40,3 +43,12 @@ target_link_libraries(_backend PRIVATE
 target_compile_options(_backend PRIVATE
     "-fobjc-arc"
 )
+
+if(BUILD_TYPE MATCHES "Debug")
+    message(STATUS "Building in DEBUG mode")
+    target_compile_options(_backend PRIVATE "-fsanitize=address" "-g" "-O0")
+    target_link_options(_backend PRIVATE "-fsanitize=address")
+else()
+    message(STATUS "Building in RELEASE mode")
+    target_compile_options(_backend PRIVATE "-O3")
+endif()
