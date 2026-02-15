@@ -13,7 +13,7 @@ id<MTLComputePipelineState> get_pipeline(const std::string& op_name, const char*
     if (!library) {
         NSString* source = [NSString stringWithUTF8String:metal_c_string];
         MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-        options.fastMathEnabled = YES;
+        options.mathMode = MTLMathModeFast;
         NSError* err = nil;
         library = [device newLibraryWithSource:source options:options error:&err];
         if (!library) {

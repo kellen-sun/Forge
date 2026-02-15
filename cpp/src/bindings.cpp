@@ -1,39 +1,36 @@
 #include "../include/bindings.h"
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
 #include "../include/array_binops.h"
 #include "../include/array_handle.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
-PYBIND11_MODULE(_backend, m) {
+NB_MODULE(_backend, m) {
     // DOC //
     m.doc() = "Forge";
 
     // ARRAY HANDLE //
-    py::class_<ArrayHandle, std::shared_ptr<ArrayHandle>>(m, "ArrayHandle")
-        .def_property_readonly("shape", [](const ArrayHandle& h) { return h.shape(); })
-        .def_property_readonly("strides", [](const ArrayHandle& h) { return h.strides(); })
-        .def_property_readonly("offset", [](const ArrayHandle& h) { return h.offset(); })
-        .def_property_readonly("data", [](const ArrayHandle& h) { return h.data(); })
+    nb::class_<ArrayHandle>(m, "ArrayHandle")
+        .def_prop_ro("shape", [](const ArrayHandle& h) { return h.shape(); })
+        .def_prop_ro("strides", [](const ArrayHandle& h) { return h.strides(); })
+        .def_prop_ro("offset", [](const ArrayHandle& h) { return h.offset(); })
+        .def_prop_ro("data", [](const ArrayHandle& h) { return h.data(); })
         .def("item", [](ArrayHandle& h) -> float {
             if (!h.shape().empty()) {
                 throw std::runtime_error("item(): can only convert scalar arrays to float");
             }
             h.synchronize();
-
             return h.data()[h.offset()];
         });
     m.def(
         "create_array_from_buffer",
-        [](py::buffer buf, std::vector<int64_t> shape) {
-            return create_array_from_buffer_py(buf, shape, /*FH=*/nullptr);
+        [](nb::ndarray<float, nb::numpy, nb::c_contig, nb::device::cpu> arr,
+           std::vector<int64_t> shape) {
+            return create_array_from_buffer_py(arr, shape, /*FH=*/nullptr);
         },
-        py::arg("buf"), py::arg("shape"));
+        nb::arg("arr"), nb::arg("shape"));
     m.def("make_view", [](std::shared_ptr<ArrayHandle> h, std::vector<int64_t> shape,
                           std::vector<int64_t> strides, size_t offset) {
         return std::make_shared<ArrayHandle>(h, shape, strides, offset);
@@ -62,6 +59,6 @@ PYBIND11_MODULE(_backend, m) {
                        const std::shared_ptr<ArrayHandle>& b) { return array_matmul(a, b); });
 
     // COMPILE AND RUN //
-    py::class_<Graph, std::shared_ptr<Graph>>(m, "Graph").def("execute", &Graph::execute);
+    nb::class_<Graph>(m, "Graph").def("execute", &Graph::execute);
     m.def("make_graph", &make_graph);
 }

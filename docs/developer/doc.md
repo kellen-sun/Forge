@@ -1,7 +1,7 @@
-# Documentation to use Forge
+# Documentation to get setup and help write Forge
 Read the README.md first for general information.
 
-## Installation Process -> Currently same as for Dev
+## Installation Process -> Currently same as for users
 
 Clone the repo, install dependencies and build the library. In the future, this will be just a single pip install command.
 ```
@@ -16,11 +16,11 @@ pip install pre-commit
 
 tools for the backend
 ```
-brew install pybind11
+pip install nanobind
 brew install cmake
 ```
 
-to build the backend
+to build the backend (with venv activated, to be able to find the nanobind cmake)
 ```
 mkdir build
 cd build

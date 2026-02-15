@@ -10,9 +10,10 @@ git clone repo
 
 Make a virtual environment and activate it.
 ```
-brew install pybind11
+pip install nanobind
 brew install cmake
 ```
+to build the backend (with venv activated, to be able to find the nanobind cmake)
 
 ```
 mkdir build

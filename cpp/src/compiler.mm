@@ -1,3 +1,4 @@
+#import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
 #include "../include/compiler.h"
@@ -8,7 +9,7 @@ void compile_metal(Graph& graph) {
     id<MTLDevice> device = (__bridge id<MTLDevice>)get_default_forge()->device_ptr();
     NSString* source = [NSString stringWithUTF8String:graph.shader_source.c_str()];
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-    options.fastMathEnabled = YES;
+    options.mathMode = MTLMathModeFast;
     NSError* err = nil;
     id<MTLLibrary> library = [device newLibraryWithSource:source options:options error:&err];
     if (err) {
