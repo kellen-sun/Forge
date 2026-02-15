@@ -90,15 +90,31 @@ void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int6
 
     uint ndim = (uint)shape.size();
 
-    [enc setBytes:shape.data() length:ndim * 8 atIndex:2];
+    if (ndim == 0) {
+        uint64_t scalar_shape = 1;
+        [enc setBytes:&scalar_shape length:8 atIndex:2];
+    } else {
+        [enc setBytes:shape.data() length:ndim * 8 atIndex:2];
+    }
 
-    [enc setBytes:strides.data() length:ndim * 8 atIndex:3];
+    if (ndim == 0) {
+        uint64_t scalar_stride = 0;
+        [enc setBytes:&scalar_stride length:8 atIndex:3];
+    } else {
+        [enc setBytes:strides.data() length:ndim * 8 atIndex:3];
+    }
     [enc setBytes:&offset length:8 atIndex:4];
 
-    [enc setBytes:src_strides.data() length:ndim * 8 atIndex:5];
+    if (ndim == 0) {
+        uint64_t scalar_stride = 0;
+        [enc setBytes:&scalar_stride length:8 atIndex:5];
+    } else {
+        [enc setBytes:src_strides.data() length:ndim * 8 atIndex:5];
+    }
     size_t other_offset = other->offset();
     [enc setBytes:&other_offset length:8 atIndex:6];
 
+    if (ndim == 0) ndim = 1;
     [enc setBytes:&ndim length:4 atIndex:7];
 
     NSUInteger n_elements = numel_from_shape(shape);
