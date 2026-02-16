@@ -27,7 +27,7 @@ nanobind_add_module(
     cpp/src/forge_handle.mm
     cpp/src/memory_arena.cpp
     cpp/src/metal_utils.mm
-    cpp/src/runtime.cpp
+    cpp/src/runtime.mm
 )
 
 # Put output in python package

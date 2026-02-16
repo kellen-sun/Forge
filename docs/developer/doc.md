@@ -39,7 +39,7 @@ to run tests
 pytest -q
 ```
 
-sometimes we need to validate Metal Buffer uses, so add this environment variable (only checks if buffer accesses are correct, in range, etc. not leaks). -s to catch the Metal API error description.
+sometimes we need to validate Metal Buffer uses, so add this environment variable (only checks if buffer accesses are correct, in range, etc. does not check leaks). -s to catch the Metal API error description.
 ```
 MTL_DEBUG_LAYER=1 pytest -s
 ```

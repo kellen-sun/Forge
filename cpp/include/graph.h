@@ -36,7 +36,7 @@ class Graph {
     std::string shader_source;
     std::vector<KernelConfig> configs;
 
-    void* pipeline;
+    std::vector<void*> pipelines;
 
     // CONSTRUCTORS //
     Graph(std::vector<Node> nodes, int output_index)

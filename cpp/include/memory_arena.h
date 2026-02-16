@@ -8,6 +8,7 @@ class MemoryArena {
    private:
     uint64_t total_bytes;
     std::vector<uint64_t> node_offsets;
+    std::vector<uint64_t> roots;
 
    public:
     // CONSTRUCTORS //
@@ -17,5 +18,7 @@ class MemoryArena {
     // ACCESSORS //
     const uint64_t get_total_bytes() const { return total_bytes; }
     const std::vector<uint64_t> get_all_offsets() const { return node_offsets; }
+    const std::vector<uint64_t> get_roots() const { return roots; }
     uint64_t get_offset(int node_index) const { return node_offsets[node_index]; }
+    uint64_t get_root(int node_index) const { return roots[node_index]; }
 };

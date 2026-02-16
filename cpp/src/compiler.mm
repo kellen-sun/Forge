@@ -5,7 +5,6 @@
 #include "../include/forge_handle.h"
 
 void compile_metal(Graph& graph) {
-    // auto defaultForgeHandle = get_default_forge();
     id<MTLDevice> device = (__bridge id<MTLDevice>)get_default_forge()->device_ptr();
     NSString* source = [NSString stringWithUTF8String:graph.shader_source.c_str()];
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
@@ -18,12 +17,33 @@ void compile_metal(Graph& graph) {
             throw std::runtime_error("Metal Error: Failed to compile Metal.");
         }
     }
-    graph.pipeline = (__bridge_retained void*)library;
+    for (auto& config : graph.configs) {
+        if (config.name.empty()) {
+            graph.pipelines.push_back(nullptr);
+            continue;
+        }
+        NSString* fnName = [NSString stringWithUTF8String:config.name.c_str()];
+        id<MTLFunction> fn = [library newFunctionWithName:fnName];
+        if (!fn) {
+            throw std::runtime_error("get_pipeline: Failed to find function '" + config.name +
+                                     "' in library");
+        }
+        id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:fn
+                                                                                     error:nil];
+
+        if (!pipeline) {
+            throw std::runtime_error("Metal Error: Failed to create pipeline state for " +
+                                     config.name);
+        }
+        graph.pipelines.push_back((__bridge_retained void*)pipeline);
+    }
 }
 
 Graph::~Graph() {
-    if (pipeline) {
-        id old_pipeline = (__bridge_transfer id)pipeline;
-        pipeline = nullptr;
+    for (auto& pipeline : pipelines) {
+        if (pipeline) {
+            id old_pipeline = (__bridge_transfer id)pipeline;
+            pipeline = nullptr;
+        }
     }
 }
