@@ -90,7 +90,7 @@ std::shared_ptr<Graph> make_graph(nb::list flat_nodes, int output_index) {
     graph->arena = std::make_shared<MemoryArena>(*graph);
     // 5. Compile Graph, to get strings of the relevant kernels and associated info
     generateKernels(*graph);
-    // 6. Pre-Compile Metal (MSL -> MTLLibrary)
-
+    // 6. Pre-Compile Metal (MSL -> MTLComputePipelineState)
+    compile_metal(*graph);
     return graph;
 }
