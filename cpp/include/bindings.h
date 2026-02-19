@@ -1,18 +1,20 @@
 #pragma once
-#include <pybind11/buffer_info.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/shared_ptr.h>
+#include <nanobind/stl/vector.h>
 
 #include "array_handle.h"
 #include "graph.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
-std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::vector<int64_t> shape,
-                                                         ForgeHandle* FH);
+std::shared_ptr<ArrayHandle> create_array_from_buffer_py(
+    nb::ndarray<float, nb::numpy, nb::c_contig, nb::device::cpu> arr, std::vector<int64_t> shape,
+    ForgeHandle* FH);
 
-py::object array_to_list(const ArrayHandle& h);
+nb::object array_to_list(const ArrayHandle& h);
 
-std::shared_ptr<Graph> parse_nodes(py::list flat_nodes, int output_index);
+std::vector<Node> parse_nodes(nb::list flat_nodes);
 
-std::shared_ptr<Graph> make_graph(py::list flat_nodes, int output_index);
+std::shared_ptr<Graph> make_graph(nb::list flat_nodes, int output_index);

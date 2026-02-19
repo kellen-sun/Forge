@@ -6,7 +6,7 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
     size_t num_nodes = graph.nodes.size();
     // size required for each Array (the node) in bytes
     std::vector<int64_t> sizes(num_nodes);
-    std::vector<int64_t> roots(num_nodes);
+    this->roots.resize(num_nodes);
 
     for (size_t idx = 0; idx < num_nodes; ++idx) {
         OpCode op = graph.nodes[idx].op;
@@ -19,6 +19,8 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
         sizes[idx] = element_size * numel_from_shape(graph.nodes[idx].shape);
     }
 
+    int output_root = this->roots[graph.output_index];
+
     // 2. Set last used array, starting at -1, check when last seen inputs
     // Force the output Array's last used to be infinite, so it doesn't get recycled
     std::vector<int> last_use(num_nodes, -1);
@@ -27,7 +29,7 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
             last_use[roots[input]] = idx;
         }
     }
-    last_use[roots[graph.output_index]] = INT_MAX;
+    last_use[roots[output_root]] = INT_MAX;
 
     // 3. Simulate allocation, and frees using greedy best-fit
     // Walk through nodes in graph, if not enough memory available allocate more
@@ -48,11 +50,16 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
     };
     uint64_t peak_memory = 0;
     std::vector<FreeBlock> free_blocks;
-    node_offsets.resize(num_nodes);
+    node_offsets.resize(num_nodes, 0);
 
     for (size_t i = 0; i < num_nodes; ++i) {
         if (roots[i] != i) {
             node_offsets[i] = node_offsets[roots[i]];
+            continue;
+        }
+
+        if (graph.nodes[i].op == OpCode::INPUT || i == output_root) {
+            this->node_offsets[i] = 0;
             continue;
         }
 
@@ -82,7 +89,9 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
         // O(N^2) to O(N)
         for (size_t r = 0; r <= i; ++r) {
             if (roots[r] == r && last_use[r] == i) {
-                free_blocks.emplace_back(node_offsets[r], sizes[r]);
+                if (graph.nodes[r].op != OpCode::INPUT && r != output_root) {
+                    free_blocks.emplace_back(this->node_offsets[r], sizes[r]);
+                }
             }
         }
     }

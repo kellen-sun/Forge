@@ -1,4 +1,3 @@
-#import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
 #include "../include/array_handle.h"

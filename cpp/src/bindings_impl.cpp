@@ -1,50 +1,43 @@
-#include <pybind11/buffer_info.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
 #include "../include/array_handle.h"
+#include "../include/bindings.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
 #include "../include/memory_arena.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
-std::shared_ptr<ArrayHandle> create_array_from_buffer_py(py::buffer buf, std::vector<int64_t> shape,
-                                                         ForgeHandle* FH) {
-    py::buffer_info info = buf.request();
-    if (info.format != py::format_descriptor<float>::format() || info.itemsize != 4) {
-        throw std::runtime_error("create_array_from_buffer: buffer must be float32 and contiguous");
-    }
+std::shared_ptr<ArrayHandle> create_array_from_buffer_py(
+    nb::ndarray<float, nb::numpy, nb::c_contig, nb::device::cpu> arr, std::vector<int64_t> shape,
+    ForgeHandle* FH) {
     int64_t total = numel_from_shape(shape);
-    if (info.size != total) {
+    if (arr.size() != total) {
         throw std::runtime_error(
             "create_array_from_buffer: buffer length doesn't match given shape");
     }
-    float* src_ptr = static_cast<float*>(info.ptr);
+    float* src_ptr = arr.data();
     void* dev = FH ? FH->device_ptr() : get_default_forge()->device_ptr();
-    std::shared_ptr<ArrayHandle> handle = std::make_shared<ArrayHandle>(src_ptr, shape, dev);
-    return handle;
+    return std::make_shared<ArrayHandle>(src_ptr, shape, dev);
 }
 
-py::object array_to_list(const ArrayHandle& h) {
+nb::object array_to_list(const ArrayHandle& h) {
     const_cast<ArrayHandle&>(h).synchronize();
     const std::vector<int64_t> shape = h.shape();
     const std::vector<int64_t> strides = h.strides();
     const std::span<const float> data = h.data();
     if (shape.empty() || strides.empty()) {
-        return py::float_(data.size() ? data[h.offset()] : 0.0);
+        return nb::cast(data.size() ? data[h.offset()] : 0.0f);
     }
 
-    std::function<py::object(size_t, size_t)> build;
-    build = [&](size_t dim, size_t offset) -> py::object {
+    std::function<nb::object(size_t, size_t)> build;
+    build = [&](size_t dim, size_t offset) -> nb::object {
         int64_t stride = strides[dim];
         if (dim + 1 == shape.size()) {
-            py::list lst;
+            nb::list lst;
             for (int64_t i = 0; i < shape[dim]; ++i)
-                lst.append(py::float_(data[offset + i * stride]));
+                lst.append(nb::float_(data[offset + i * stride]));
             return lst;
         } else {
-            py::list lst;
+            nb::list lst;
             for (int64_t i = 0; i < shape[dim]; ++i)
                 lst.append(build(dim + 1, offset + i * stride));
             return lst;
@@ -53,28 +46,28 @@ py::object array_to_list(const ArrayHandle& h) {
     return build(0, h.offset());
 }
 
-std::vector<Node> parse_nodes(py::list flat_nodes) {
+std::vector<Node> parse_nodes(nb::list flat_nodes) {
     std::vector<Node> nodes;
     nodes.reserve(flat_nodes.size());
 
     for (auto handle : flat_nodes) {
-        auto t = handle.cast<py::tuple>();
+        auto t = nb::cast<nb::tuple>(handle);
 
         Node n;
-        n.op = static_cast<OpCode>(t[0].cast<int>());
-        n.inputs = t[1].cast<std::vector<int>>();
-        n.shape = t[2].cast<std::vector<int64_t>>();
-        n.offset = t[3].cast<int64_t>();
-        n.strides = t[4].cast<std::vector<int64_t>>();
+        n.op = static_cast<OpCode>(nb::cast<int>(t[0]));
+        n.inputs = nb::cast<std::vector<int>>(t[1]);
+        n.shape = nb::cast<std::vector<int64_t>>(t[2]);
+        n.offset = nb::cast<int64_t>(t[3]);
+        n.strides = nb::cast<std::vector<int64_t>>(t[4]);
+        nb::tuple py_args = nb::cast<nb::tuple>(t[5]);
 
-        py::tuple py_args = t[5].cast<py::tuple>();
         // different operation add more later, if they take args
         // consider using a switch statement
         if (n.op == OpCode::UPDATE) {
             // py_args = (shape, strides, offset)
-            auto s = py_args[0].cast<std::vector<uint64_t>>();
-            auto st = py_args[1].cast<std::vector<uint64_t>>();
-            uint64_t off = py_args[2].cast<uint64_t>();
+            auto s = nb::cast<std::vector<int64_t>>(py_args[0]);
+            auto st = nb::cast<std::vector<int64_t>>(py_args[1]);
+            int64_t off = nb::cast<int64_t>(py_args[2]);
             // flatten
             n.args.insert(n.args.end(), s.begin(), s.end());
             n.args.insert(n.args.end(), st.begin(), st.end());
@@ -85,7 +78,7 @@ std::vector<Node> parse_nodes(py::list flat_nodes) {
     return nodes;
 }
 
-std::shared_ptr<Graph> make_graph(py::list flat_nodes, int output_index) {
+std::shared_ptr<Graph> make_graph(nb::list flat_nodes, int output_index) {
     // 1. Get the basic graph
     std::vector<Node> raw_nodes = parse_nodes(flat_nodes);
     // 2. Optimize graph
@@ -97,7 +90,7 @@ std::shared_ptr<Graph> make_graph(py::list flat_nodes, int output_index) {
     graph->arena = std::make_shared<MemoryArena>(*graph);
     // 5. Compile Graph, to get strings of the relevant kernels and associated info
     generateKernels(*graph);
-    // 6. Pre-Compile Metal (MSL -> MTLLibrary)
-
+    // 6. Pre-Compile Metal (MSL -> MTLComputePipelineState)
+    compile_metal(*graph);
     return graph;
 }

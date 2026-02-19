@@ -6,8 +6,8 @@
 #include "../include/metal_utils.h"
 
 ArrayStorage::~ArrayStorage() {
-    if (metal_buffer_) CFRelease(metal_buffer_);
-    if (write_event_) CFRelease(write_event_);
+    if (metal_buffer_) id old_buffer = (__bridge_transfer id)metal_buffer_;
+    if (write_event_) id old_event = (__bridge_transfer id)write_event_;
 }
 
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
@@ -62,9 +62,9 @@ std::span<const float> ArrayHandle::data() const { return const_cast<ArrayHandle
 
 void ArrayHandle::set_event(void* event) {
     if (storage_->write_event_ == event) return;
-    if (storage_->write_event_) CFRelease(storage_->write_event_);
+    if (storage_->write_event_) id old_event = (__bridge_transfer id)storage_->write_event_;
     if (event)
-        storage_->write_event_ = (void*)CFRetain(event);
+        storage_->write_event_ = (__bridge_retained void*)(__bridge id)event;
     else
         storage_->write_event_ = nullptr;
 }
@@ -90,15 +90,31 @@ void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int6
 
     uint ndim = (uint)shape.size();
 
-    [enc setBytes:shape.data() length:ndim * 8 atIndex:2];
+    if (ndim == 0) {
+        uint64_t scalar_shape = 1;
+        [enc setBytes:&scalar_shape length:8 atIndex:2];
+    } else {
+        [enc setBytes:shape.data() length:ndim * 8 atIndex:2];
+    }
 
-    [enc setBytes:strides.data() length:ndim * 8 atIndex:3];
+    if (ndim == 0) {
+        uint64_t scalar_stride = 0;
+        [enc setBytes:&scalar_stride length:8 atIndex:3];
+    } else {
+        [enc setBytes:strides.data() length:ndim * 8 atIndex:3];
+    }
     [enc setBytes:&offset length:8 atIndex:4];
 
-    [enc setBytes:src_strides.data() length:ndim * 8 atIndex:5];
+    if (ndim == 0) {
+        uint64_t scalar_stride = 0;
+        [enc setBytes:&scalar_stride length:8 atIndex:5];
+    } else {
+        [enc setBytes:src_strides.data() length:ndim * 8 atIndex:5];
+    }
     size_t other_offset = other->offset();
     [enc setBytes:&other_offset length:8 atIndex:6];
 
+    if (ndim == 0) ndim = 1;
     [enc setBytes:&ndim length:4 atIndex:7];
 
     NSUInteger n_elements = numel_from_shape(shape);
@@ -116,7 +132,7 @@ void ArrayHandle::synchronize() {
     if (!storage_->write_event_) return;
     id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)storage_->write_event_;
     [cmd waitUntilCompleted];
-    CFRelease(storage_->write_event_);
+    id cmd_to_release = (__bridge_transfer id)storage_->write_event_;
     storage_->write_event_ = nullptr;
 }
 
