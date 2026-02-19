@@ -29,6 +29,8 @@ kernel void NAME( \
     const device float* B       [[ buffer(1) ]], \
     device float* Out           [[ buffer(2) ]], \
     \
+    // TODO: Why are these in buffers, its just a few integers,
+    // can't we pass it using .setBytes
     constant long* shape        [[ buffer(3) ]], \
     constant long* strides_A    [[ buffer(4) ]], \
     constant long& offset_A     [[ buffer(5) ]], \

@@ -18,8 +18,8 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
 
         sizes[idx] = element_size * numel_from_shape(graph.nodes[idx].shape);
     }
-
-    int output_root = this->roots[graph.output_index];
+    int output_root;
+    if (num_nodes > 0) output_root = this->roots[graph.output_index];
 
     // 2. Set last used array, starting at -1, check when last seen inputs
     // Force the output Array's last used to be infinite, so it doesn't get recycled
@@ -29,7 +29,7 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
             last_use[roots[input]] = idx;
         }
     }
-    last_use[roots[output_root]] = INT_MAX;
+    if (num_nodes > 0) last_use[roots[output_root]] = INT_MAX;
 
     // 3. Simulate allocation, and frees using greedy best-fit
     // Walk through nodes in graph, if not enough memory available allocate more
