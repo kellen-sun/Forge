@@ -70,4 +70,5 @@ TEST_P(MemoryArenaTest, TestAllocation) {
         << "Roots mismatch in " << test_name;
 }
 
-INSTANTIATE_TEST_SUITE_P(TestSuite, MemoryArenaTest, ::testing::Values("test1", "test2"));
+INSTANTIATE_TEST_SUITE_P(TestSuite, MemoryArenaTest,
+                         ::testing::Values("test1", "test2", "test3", "test4"));

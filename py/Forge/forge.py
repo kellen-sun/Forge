@@ -42,7 +42,8 @@ def forge(fn=None, *, debug=False):
         if cache_key in GRAPH_CACHE:
             backend_graph = GRAPH_CACHE[cache_key]
         else:
-            print(f"Compiling func {fn.__name__}")
+            if debug:
+                print(f"Compiling func {fn.__name__}")
             g = Graph()
             graph.CURRENT_GRAPH = g
             sym_args = []
