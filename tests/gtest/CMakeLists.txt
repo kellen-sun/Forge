@@ -10,6 +10,7 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(forge_tests
     test_memory_arena.cpp
+    test_array_helpers.cpp
 )
 
 set_target_properties(forge_tests PROPERTIES
