@@ -8,6 +8,7 @@ std::vector<Node> optimize_graph(std::vector<Node> raw_nodes) { return raw_nodes
 // 1. dead code elimination
 // 2. fold constants, (3 + 4) known at compile time. or
 // 3. common sub expression elimination
+// ---> those all fall under LVN analysis
 // 4. reroll a loop, say they did: for i in len(A): A[i] + B[i] -> just A+ B yk
 // 5. Fusion, combine nodes into "blocks" that run in the same "way" (elementwise easiest)
 
