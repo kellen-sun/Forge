@@ -13,21 +13,37 @@ def _flatten(g, output):
     flat_nodes = []
     for node in g.nodes:
         input_ids = [node_to_id[parent] for parent in node.inputs]
-        flat_nodes.append((node.op, input_ids, node.shape, node.offset, node.strides))
+        flat_nodes.append(
+            (node.op, input_ids, node.shape, node.offset, node.strides, node.args)
+        )
     return flat_nodes, node_to_id[output.node]
 
 
-def forge(fn):
+def _print_helper(flat_nodes, output_index):
+    for node in flat_nodes:
+        print(node[0])
+        print(*node[1])
+        print(*node[2])
+        print(*node[4])
+        print(node[3])
+        print(*node[5])
+    print(output_index)
+
+
+def forge(fn=None, *, debug=False):
     """Decorator"""
+    if fn is None:
+        return functools.partial(forge, debug=debug)
 
     @functools.wraps(fn)
     def wrapper(*args):
-        input_metas = tuple((x.shape, x.offset, x.strides) for x in args)
+        input_metas = tuple((x.shape, x.offset, tuple(x.strides)) for x in args)
         cache_key = (id(fn), input_metas)
         if cache_key in GRAPH_CACHE:
             backend_graph = GRAPH_CACHE[cache_key]
         else:
-            print(f"Compiling func {fn.__name__}")
+            if debug:
+                print(f"Compiling func {fn.__name__}")
             g = Graph()
             graph.CURRENT_GRAPH = g
             sym_args = []
@@ -44,6 +60,8 @@ def forge(fn):
                 graph.CURRENT_GRAPH = None
 
             flat_nodes, output_index = _flatten(g, sym_out)
+            if debug:
+                _print_helper(flat_nodes, output_index)
             backend_graph = _backend.make_graph(flat_nodes, output_index)
             GRAPH_CACHE[cache_key] = backend_graph
 

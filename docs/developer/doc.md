@@ -1,54 +1,81 @@
-# Documentation to get setup and help write Forge
+# Documentation to setup and help write Forge
 Read the README.md first for general information.
 
-## Installation Process -> Currently same as for users
+## Installation Process
+Clone the repo:
+```
+git clone https://github.com/kellen-sun/Forge.git
+```
 
-Clone the repo, install dependencies and build the library. In the future, this will be just a single pip install command.
+Make a virtual environment and activate it:
 ```
-git clone repo
-```
-
-Make a virtual environment and activate it.
-```
+python3 -m venv .venv
+source .venv/bin/activate
 pip install pytest
 pip install pre-commit
 ```
 
-tools for the backend
+Install tools for the backend:
 ```
 pip install nanobind
 brew install cmake
 ```
-
-to build the backend (with venv activated, to be able to find the nanobind cmake)
+### Building the backend
+Keep your venv activated, so that cmake can find ``nanobind``
 ```
 mkdir build
 cd build
+```
+#### Configure the build.
+
+For pytest, and to use the Python library:
+```
 cmake ..
-cmake -DBUILD_TYPE=Debug .
+```
+For ``gtest`` with -O0, Asan:
+```
+cmake .. -DBUILD_TYPE=Debug -DBUILD_TESTS=ON
+```
+For ``gtest`` with -O3:
+```
+cmake .. -DBUILD_TESTS=ON
+```
+#### Build.
+```
 cmake --build .
 ```
 
-setup the Forge library itself (from project root run):
+### To run tests
+#### Pytest
+Setup the Forge library itself (from project root run):
 ```
 pip install -e .
 ```
-
-to run tests
+To run all ``pytest``'s. The simplest command is:
 ```
-pytest -q
+pytest
 ```
-
-sometimes we need to validate Metal Buffer uses, so add this environment variable (only checks if buffer accesses are correct, in range, etc. does not check leaks). -s to catch the Metal API error description.
+To run ``pytest`` with validation of Metal Buffer uses, add this environment variable (only checks if buffer accesses are correct; does not check for leaks). ``-s`` to catch the Metal API error description:
 ```
 MTL_DEBUG_LAYER=1 pytest -s
 ```
+Refer to ``pytest`` documentation, to learn the commands to run specific files or tests at a time, and options etc.
 
-to run benchmarks
+#### Gtest
+Compile with one of the ``gtest`` options mentioned above.
+Run:
+```
+./build/tests/forge_tests
+```
+Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
+
+### To run benchmarks
 ```
 pip install numpy torch mlx
 ```
+Then simply run the Python files in ``/benchmarks``
 
+### To run the code formatter
 Every git commit will run the pre-commit code formatter. You can also run it manually with:
 ```
 pre-commit run --all-files

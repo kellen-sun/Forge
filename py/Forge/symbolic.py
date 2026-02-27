@@ -11,8 +11,8 @@ def _broadcast_shapes(s1, s2):
         return s1
     l1, l2 = len(s1), len(s2)
     length = max(l1, l2)
-    s1 = (1,) * (length - l1) + s1
-    s2 = (1,) * (length - l2) + s2
+    s1 = (1,) * (length - l1) + tuple(s1)
+    s2 = (1,) * (length - l2) + tuple(s2)
     out_shape = []
     for d1, d2 in zip(s1, s2):
         if d1 != d2 and d1 != 1 and d2 != 1:

@@ -2,27 +2,34 @@
 Read the README.md first for general information.
 
 ## Installation Process -> Currently same as for developers
+Hopefully moved to an easy ``pip install`` in the future.
 
-Clone the repo, install dependencies and build the library. In the future, this will be just a single pip install command.
+Clone the repo:
 ```
-git clone repo
+git clone https://github.com/kellen-sun/Forge.git
 ```
 
-Make a virtual environment and activate it.
+Make a virtual environment and activate it:
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install pytest
+pip install pre-commit
+```
+
+Install tools for the backend:
 ```
 pip install nanobind
 brew install cmake
 ```
-to build the backend (with venv activated, to be able to find the nanobind cmake)
-
+### Building the backend
+Keep your venv activated, so that cmake can find ``nanobind``
 ```
 mkdir build
 cd build
 cmake ..
-cmake -DBUILD_TYPE=Release .
 cmake --build .
 ```
-
 Setup the Forge library itself (from project root run):
 ```
 pip install -e .

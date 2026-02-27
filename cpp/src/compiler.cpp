@@ -3,6 +3,15 @@
 std::vector<Node> optimize_graph(std::vector<Node> raw_nodes) { return raw_nodes; }
 // Could generate Fused Kernels, with special OpCodes
 // Description of which fusedkernel for the OpCode given in the OpCodes "Arg" parameter
+// Read about MLIR & TVM as options here instead of doing it here
+// Optimization ideas:
+// 1. dead code elimination
+// 2. fold constants, (3 + 4) known at compile time. or
+// 3. common sub expression elimination
+// ---> those all fall under LVN analysis
+// 4. reroll a loop, say they did: for i in len(A): A[i] + B[i] -> just A+ B yk
+// 5. Fusion, combine nodes into "blocks" that run in the same "way" (elementwise easiest)
+// 6. loop fusion. like two for i in range(100) can be put together
 
 void generateKernels(Graph& graph) {}
 // Generates one huge string of all the kernel functions back to back

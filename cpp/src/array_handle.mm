@@ -41,9 +41,7 @@ ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector
     : shape_(std::move(new_shape)),
       strides_(std::move(new_strides)),
       offset_(new_offset),
-      storage_(parent->storage_) {
-    // parent->synchronize(); // TODO: Do we need to synch here???
-}
+      storage_(parent->storage_) {}
 
 std::span<float> ArrayHandle::data() {
     size_t total = numel_from_shape(shape_);
