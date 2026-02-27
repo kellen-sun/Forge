@@ -34,5 +34,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          working-directory: ./build
+          cd build
           ./tests/forge_tests
