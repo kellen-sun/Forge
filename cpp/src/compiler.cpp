@@ -11,6 +11,7 @@ std::vector<Node> optimize_graph(std::vector<Node> raw_nodes) { return raw_nodes
 // ---> those all fall under LVN analysis
 // 4. reroll a loop, say they did: for i in len(A): A[i] + B[i] -> just A+ B yk
 // 5. Fusion, combine nodes into "blocks" that run in the same "way" (elementwise easiest)
+// 6. loop fusion. like two for i in range(100) can be put together
 
 void generateKernels(Graph& graph) {}
 // Generates one huge string of all the kernel functions back to back
