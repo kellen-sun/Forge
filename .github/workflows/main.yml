@@ -9,7 +9,7 @@ on:
 jobs:
   test-apple-silicon:
     name: gtest on M1 Mac (CPU)
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout repository
