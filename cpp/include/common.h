@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 
 enum class OpCode : int {
     INPUT = 0,
@@ -13,4 +14,11 @@ enum class OpCode : int {
     UPDATE = 9,
     CONSTANT = 10,
     COPY = 11
+};
+
+const std::map<OpCode, std::string> op_symbol = {
+    {OpCode::ADD, "+"},
+    {OpCode::SUB, "-"},
+    {OpCode::MUL, "*"},
+    {OpCode::DIV, "/"},
 };
