@@ -27,31 +27,8 @@ std::vector<Node> optimize_graph(std::vector<Node> raw_nodes) { return raw_nodes
 // Op metadata: Shape, strides (internal offset?) WONT be handled from execute()
 // This means the kernel strings we generate needs to bake in/hardcode the loops for that
 // kernels generated so that out buffer is idx 0, then the N inputs to the node (in order)
-/*
-      // Node 1 (B): shape={2,3}, strides={3,1}, offset=0
-      // Bake in as constants:
-      constant long shape[] = {2, 3};
-      constant long strides_in0[] = {3, 1};
-      constant long offset_in0 = 0;
 
-      // Node 2 (C): shape={2,3}, strides={3,1}, offset=0
-      constant long strides_in1[] = {3, 1};
-      constant long offset_in1 = 0;
 
-      // Compute strided read indices
-      uint remaining = gid;
-      uint idx_in0 = offset_in0;
-      uint idx_in1 = offset_in1;
-      for (int i = 1; i >= 0; --i) {
-          uint coord = remaining % shape[i];
-          idx_in0 += coord * strides_in0[i];
-          idx_in1 += coord * strides_in1[i];
-          remaining /= shape[i];
-      }
-
-      out[gid] = in0[idx_in0] * in1[idx_in1];
-  }
-*/
 void generateKernels(Graph& graph) {
     graph.shader_source = "#include <metal_stdlib>\nusing namespace metal;\n";
     for (int64_t i = 0; i < graph.nodes.size(); i++) {
