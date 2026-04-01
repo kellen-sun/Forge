@@ -2,6 +2,7 @@
 
 #include "../include/array_binops.h"
 #include "../include/array_handle.h"
+#include "../include/array_unaryops.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
 
@@ -43,6 +44,39 @@ NB_MODULE(_backend, m) {
     m.def("array_to_list", &array_to_list);
 
     // OPERATIONS //
+    // unary_ops //
+    m.def("exp", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp"); });
+    m.def("exp2", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp2"); });
+    m.def("exp10",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp10"); });
+    m.def("log", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "log"); });
+    m.def("log2", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "log2"); });
+    m.def("log10",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "log10"); });
+    m.def("sqrt", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sqrt"); });
+    m.def("rsqrt",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "rsqrt"); });
+    m.def("abs", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "abs"); });
+    m.def("sign", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sign"); });
+    m.def("ceil", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "ceil"); });
+    m.def("floor",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "floor"); });
+    m.def("round",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "round"); });
+    m.def("trunc",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "trunc"); });
+    m.def("fract",
+          [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "fract"); });
+    m.def("sin", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sin"); });
+    m.def("cos", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "cos"); });
+    m.def("tan", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "tan"); });
+    m.def("asin", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "asin"); });
+    m.def("acos", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "acos"); });
+    m.def("atan", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "atan"); });
+    m.def("sinh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sinh"); });
+    m.def("cosh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "cosh"); });
+
+    // binary_ops //
     m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
         return array_binops(a, b, "add");
     });

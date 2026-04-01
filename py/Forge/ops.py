@@ -50,6 +50,11 @@ def array_matmul(self, other):
     return Array(_backend.matmul(self._handle, other._handle))
 
 
+def exp(self):
+    h = _backend.exp(self._handle)
+    return Array.from_handle(h)
+
+
 Array.__add__ = array_add
 Array.__radd__ = array_add
 Array.__sub__ = array_sub
@@ -59,3 +64,4 @@ Array.__rmul__ = array_mul
 Array.__truediv__ = array_div
 Array.__rtruediv__ = array_div
 Array.__matmul__ = array_matmul
+Array.exp = exp

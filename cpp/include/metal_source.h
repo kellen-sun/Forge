@@ -23,14 +23,53 @@ uint get_strided_index(uint gid,
     return physical_idx;
 }
 
-#define BINARY_OP(NAME, OP) \
-kernel void NAME( \
+#define UNARY_OP(NAME1, OP1) \
+kernel void NAME1( \
+    const device float* A       [[ buffer(0) ]], \
+    device float* Out           [[ buffer(1) ]], \
+    constant long* shape        [[ buffer(2) ]], \
+    constant long* strides_A    [[ buffer(3) ]], \
+    constant long& offset_A     [[ buffer(4) ]], \
+    constant uint& ndim         [[ buffer(5) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    /* Calculate Read Locations */ \
+    uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
+    \
+    Out[gid] = OP1(A[idx_a]); \
+}
+UNARY_OP(exp, exp)
+UNARY_OP(exp2, exp2)
+UNARY_OP(exp10, exp10)
+UNARY_OP(log, log)
+UNARY_OP(log2, log2)
+UNARY_OP(log10, log10)
+UNARY_OP(sqrt, sqrt)
+UNARY_OP(rsqrt, rsqrt)
+UNARY_OP(abs, abs)
+UNARY_OP(sign, sign)
+UNARY_OP(ceil, ceil)
+UNARY_OP(floor, floor)
+UNARY_OP(round, round)
+UNARY_OP(trunc, trunc)
+UNARY_OP(fract, fract)
+UNARY_OP(sin, sin)
+UNARY_OP(cos, cos)
+UNARY_OP(tan, tan)
+UNARY_OP(asin, asin)
+UNARY_OP(acos, acos)
+UNARY_OP(atan, atan)
+UNARY_OP(sinh, sinh)
+UNARY_OP(cosh, cosh)
+UNARY_OP(tanh, tanh)
+
+
+#define BINARY_OP(NAME2, OP2) \
+kernel void NAME2( \
     const device float* A       [[ buffer(0) ]], \
     const device float* B       [[ buffer(1) ]], \
     device float* Out           [[ buffer(2) ]], \
-    \
-    /* TODO: Why are these in buffers, its just a few integers */ \
-    /* can't we pass it using .setBytes */ \
     constant long* shape        [[ buffer(3) ]], \
     constant long* strides_A    [[ buffer(4) ]], \
     constant long& offset_A     [[ buffer(5) ]], \
@@ -44,7 +83,7 @@ kernel void NAME( \
     uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
     uint idx_b = get_strided_index(gid, shape, strides_B, offset_B, ndim); \
     \
-    Out[gid] = A[idx_a] OP B[idx_b]; \
+    Out[gid] = A[idx_a] OP2 B[idx_b]; \
 }
 BINARY_OP(add, +)
 BINARY_OP(sub, -)

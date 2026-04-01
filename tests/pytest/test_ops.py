@@ -1,3 +1,4 @@
+import Forge
 import numpy as np
 import pytest
 from Forge import Array
@@ -239,3 +240,37 @@ def test_matmul_transpose():
     a2 = Array([[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]])
     result = a1 @ a2
     assert result.list() == [[89.0, 98.0], [116.0, 128.0]]
+
+
+# --- EXPONENTIATION ---
+
+
+def test_exp_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp()
+    assert result.list() == [
+        [2.7182817459106445, 7.3890557289123535],
+        [20.085535049438477, 54.598148345947266],
+    ]
+
+
+# def test_addition_mismatch_shape():
+#     a1 = Array([[1, 2]])
+#     a2 = Array([[1, 2], [3, 4]])
+#     with pytest.raises(ValueError):
+#         _ = a1 + a2
+
+
+def test_fexp():
+    a1 = Array([1, 2, 3])
+    assert (Forge.exp(a1)).list() == [
+        2.7182817459106445,
+        7.3890557289123535,
+        20.085535049438477,
+    ]
+
+
+# def test_add_non_array():
+#     a = Array([1, 2, 3])
+#     with pytest.raises(TypeError):
+#         _ = a + 5
