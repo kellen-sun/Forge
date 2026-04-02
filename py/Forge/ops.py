@@ -50,9 +50,42 @@ def array_matmul(self, other):
     return Array(_backend.matmul(self._handle, other._handle))
 
 
-def exp(self):
-    h = _backend.exp(self._handle)
-    return Array.from_handle(h)
+UNARY_OPS = [
+    "exp",
+    "exp2",
+    "exp10",
+    "log",
+    "log2",
+    "log10",
+    "sqrt",
+    "rsqrt",
+    "abs",
+    "sign",
+    "ceil",
+    "floor",
+    "round",
+    "trunc",
+    "fract",
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "sinh",
+    "cosh",
+    "tanh",
+]
+
+for op_name in UNARY_OPS:
+    backend_fn = getattr(_backend, op_name)
+
+    def unary_wrapper(x: Array, _fn=backend_fn) -> Array:
+        return Array.from_handle(_fn(x._handle))
+
+    unary_wrapper.__name__ = op_name
+    globals()[op_name] = unary_wrapper
+    setattr(Array, op_name, unary_wrapper)
 
 
 Array.__add__ = array_add
@@ -64,4 +97,3 @@ Array.__rmul__ = array_mul
 Array.__truediv__ = array_div
 Array.__rtruediv__ = array_div
 Array.__matmul__ = array_matmul
-Array.exp = exp

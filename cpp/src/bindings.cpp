@@ -75,6 +75,7 @@ NB_MODULE(_backend, m) {
     m.def("atan", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "atan"); });
     m.def("sinh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sinh"); });
     m.def("cosh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "cosh"); });
+    m.def("tanh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "tanh"); });
 
     // binary_ops //
     m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {

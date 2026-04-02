@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from Forge import Array
 
-# --- BASIC SHAPE + CREATION ---
+# region --- BASIC SHAPE + CREATION ---
 
 
 def test_shape_basic():
@@ -55,7 +55,9 @@ def test_ragged_deep():
         Array([[1, 2], [3, [4]]])
 
 
-# --- TYPE HANDLING ---
+# endregion
+
+# region --- TYPE HANDLING ---
 
 
 def test_array_module_float_array():
@@ -87,7 +89,9 @@ def test_bytes_with_shape_fail():
         Array(b"\x00\x00\x00\x01", shape=(2, 3))
 
 
-# --- from_buffer + from_handle ---
+# endregion
+
+# region --- from_buffer + from_handle ---
 
 
 def test_from_buffer():
@@ -106,7 +110,9 @@ def test_from_handle_roundtrip():
     assert b.list() == [[1, 2], [3, 4]]
 
 
-# --- DEEP NESTING ---
+# endregion
+
+# region --- DEEP NESTING ---
 
 
 def test_3d_shape():
@@ -119,7 +125,9 @@ def test_4d_shape():
     assert a.shape == (2, 2, 1, 1)
 
 
-# --- EDGE CASES / SANITY ---
+# endregion
+
+# region --- EDGE CASES / SANITY ---
 
 
 def test_zero_dim_addition():
@@ -138,3 +146,6 @@ def test_list_roundtrip():
     original = [[1, 2], [3, 4]]
     a = Array(original)
     assert a.list() == original
+
+
+# endregion

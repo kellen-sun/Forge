@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from Forge import Array
 
-# --- ADDITION ---
+# region --- ADDITION ---
 
 
 def test_addition_correct():
@@ -34,7 +34,9 @@ def test_add_non_array():
         _ = a + 5
 
 
-# --- SUBTRACTION ---
+# endregion
+
+# region --- SUBTRACTION ---
 
 
 def test_subtraction_correct():
@@ -67,7 +69,9 @@ def test_sub_non_array():
         _ = a - 5
 
 
-# --- MULTIPLICATION ---
+# endregion
+
+# region --- MULTIPLICATION ---
 
 
 def test_multiplication_correct():
@@ -92,7 +96,9 @@ def test_mult_non_array():
         _ = a * 5
 
 
-# --- DIVISION ---
+# endregion
+
+# region --- DIVISION ---
 
 
 def test_division_correct():
@@ -131,7 +137,9 @@ def test_div_mismatch_shape():
         _ = a1 / a2
 
 
-# --- MATMUL ---
+# endregion
+
+# region --- MATMUL ---
 
 
 def test_matmul_2d_correct():
@@ -242,7 +250,9 @@ def test_matmul_transpose():
     assert result.list() == [[89.0, 98.0], [116.0, 128.0]]
 
 
-# --- EXPONENTIATION ---
+# endregion
+
+# region --- EXPONENTIATION ---
 
 
 def test_exp_correct():
@@ -254,13 +264,6 @@ def test_exp_correct():
     ]
 
 
-# def test_addition_mismatch_shape():
-#     a1 = Array([[1, 2]])
-#     a2 = Array([[1, 2], [3, 4]])
-#     with pytest.raises(ValueError):
-#         _ = a1 + a2
-
-
 def test_fexp():
     a1 = Array([1, 2, 3])
     assert (Forge.exp(a1)).list() == [
@@ -270,7 +273,24 @@ def test_fexp():
     ]
 
 
-# def test_add_non_array():
-#     a = Array([1, 2, 3])
-#     with pytest.raises(TypeError):
-#         _ = a + 5
+def test_exp2_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp2()
+    assert result.list() == [
+        [2.0, 4.0],
+        [8.0, 16.0],
+    ]
+
+
+def test_exp10_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp10()
+    assert result.list() == [
+        [9.999999046325684, 99.99999237060547],
+        [999.9998168945312, 9999.998046875],
+    ]
+
+
+# endregion
+
+# region --- LOGARITHMS ---

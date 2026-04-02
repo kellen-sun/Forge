@@ -13,7 +13,7 @@ def tensor_3d():
     return Array(data)
 
 
-# --- transpose ---
+# region --- transpose ---
 
 
 def test_transpose(tensor_3d):
@@ -40,7 +40,9 @@ def test_transpose(tensor_3d):
         _ = tensor_3d.transpose(axes=[0, 0, 1])
 
 
-# --- reshape ---
+# endregion
+
+# region --- reshape ---
 
 
 def test_reshape(tensor_3d):
@@ -101,3 +103,6 @@ def test_mutation_propagation(tensor_3d):
     r = tensor_3d.reshape((2, 12))
     r[0, 0] = 200
     assert tensor_3d[0, 0, 0] == 200
+
+
+# endregion
