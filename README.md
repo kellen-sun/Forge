@@ -28,5 +28,5 @@ If this sounds interesting and you'd like to try out the library, you can instal
 If you find anything interesting around and wish to contribute feel free to. You can take a look at [this guide](https://github.com/kellen-sun/Forge/tree/main/docs/developer/doc.md) to get setup and contribute or shoot me a message @kellen05 on discord.
 
 Thanks be to our contributors!
-- @BillJJ
-- @DawDa07
+- [@BillJJ](https://github.com/BillJJ)
+- [@DawDa07](https://github.com/DawDa07)

@@ -2,6 +2,7 @@
 
 #include "../include/array_binops.h"
 #include "../include/array_handle.h"
+#include "../include/array_nullaryops.h"
 #include "../include/array_unaryops.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
@@ -42,8 +43,15 @@ NB_MODULE(_backend, m) {
     m.def("reshape", &array_reshape);
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
+    m.def("set_seed", [](int32_t seed) { return get_default_forge()->set_seed(seed); });
 
     // OPERATIONS //
+    // nullary_ops //
+    m.def("rand",
+          [](const std::vector<int64_t>& shape) { return array_nullaryops(shape, "rand"); });
+    m.def("randn",
+          [](const std::vector<int64_t>& shape) { return array_nullaryops(shape, "randn"); });
+
     // unary_ops //
     m.def("exp", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp"); });
     m.def("exp2", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp2"); });

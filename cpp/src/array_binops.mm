@@ -45,14 +45,13 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
     }
 
     auto defaultForgeHandle = get_default_forge();
-    id<MTLDevice> device = (__bridge id<MTLDevice>)defaultForgeHandle->device_ptr();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
     id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
 
     // allocate output ArrayHandle
-    auto out = std::make_shared<ArrayHandle>(A->shape(), defaultForgeHandle->device_ptr());
+    auto out = std::make_shared<ArrayHandle>(shapeA, defaultForgeHandle->device_ptr());
 
     id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)B->metal_buffer();
@@ -69,13 +68,13 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
     [enc setBuffer:bufB offset:0 atIndex:1];
     [enc setBuffer:bufOut offset:0 atIndex:2];
 
-    uint ndim = (uint)out->shape().size();
+    uint ndim = (uint)shapeA.size();
 
     if (ndim == 0) {
         uint64_t scalar_shape = 1;
         [enc setBytes:&scalar_shape length:8 atIndex:3];
     } else {
-        [enc setBytes:out->shape().data() length:ndim * 8 atIndex:3];
+        [enc setBytes:shapeA.data() length:ndim * 8 atIndex:3];
     }
     size_t current_offsetA = A->offset();
     if (ndim == 0) {
@@ -97,7 +96,7 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
     if (ndim == 0) ndim = 1;
     [enc setBytes:&ndim length:4 atIndex:8];
 
-    MTLSize grid = MTLSizeMake(A->data().size(), 1, 1);
+    MTLSize grid = MTLSizeMake(numel_from_shape(shapeA), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];

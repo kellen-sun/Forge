@@ -18,4 +18,6 @@ class ForgeHandle {
 
     void* device_ptr() const;
     void* queue_ptr() const;
+    uint32_t get_seed() const;
+    void set_seed(uint32_t s);
 };

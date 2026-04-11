@@ -1,3 +1,5 @@
+from typing import Sequence, Union
+
 from . import _backend
 from .array import Array
 
@@ -86,6 +88,28 @@ for op_name in UNARY_OPS:
     unary_wrapper.__name__ = op_name
     globals()[op_name] = unary_wrapper
     setattr(Array, op_name, unary_wrapper)
+
+NULLARY_OPS = [
+    "rand",
+    "randn",
+]
+
+for op_name in NULLARY_OPS:
+    backend_fn = getattr(_backend, op_name)
+
+    def nullary_wrapper(*shape: Union[int, Sequence[int]], _fn=backend_fn) -> Array:
+        if len(shape) == 1:
+            arg = shape[0]
+            if isinstance(arg, int):
+                shape = [arg]
+            else:
+                shape = list(arg)
+        else:
+            shape = list(shape)
+        return Array.from_handle(_fn(shape))
+
+    nullary_wrapper.__name__ = op_name
+    globals()[op_name] = nullary_wrapper
 
 
 Array.__add__ = array_add

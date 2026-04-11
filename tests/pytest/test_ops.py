@@ -294,3 +294,24 @@ def test_exp10_correct():
 # endregion
 
 # region --- LOGARITHMS ---
+
+# endregion
+
+# region --- RANDOM ---
+
+
+def test_rand_correct():
+    Forge.set_seed(42)
+    result = Forge.rand(2, 2)
+    assert result.list() == [
+        [0.34056931734085083, 0.4297073781490326],
+        [0.4053425192832947, 0.8056803345680237],
+    ]
+    result2 = Forge.rand(2, 2)
+    assert result2.list() != [
+        [0.34056931734085083, 0.4297073781490326],
+        [0.4053425192832947, 0.8056803345680237],
+    ]
+
+
+# endregion

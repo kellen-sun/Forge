@@ -8,7 +8,6 @@
 std::shared_ptr<ArrayHandle> array_unaryops(const std::shared_ptr<ArrayHandle>& A,
                                             const std::string& op_name) {
     auto defaultForgeHandle = get_default_forge();
-    id<MTLDevice> device = (__bridge id<MTLDevice>)defaultForgeHandle->device_ptr();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
@@ -50,7 +49,7 @@ std::shared_ptr<ArrayHandle> array_unaryops(const std::shared_ptr<ArrayHandle>& 
     if (ndim == 0) ndim = 1;
     [enc setBytes:&ndim length:4 atIndex:5];
 
-    MTLSize grid = MTLSizeMake(A->data().size(), 1, 1);
+    MTLSize grid = MTLSizeMake(numel_from_shape(A->shape()), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];

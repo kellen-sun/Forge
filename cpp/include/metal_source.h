@@ -23,6 +23,43 @@ uint get_strided_index(uint gid,
     return physical_idx;
 }
 
+inline uint hash(uint seed) {
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+inline float rand_uniform(uint gid, uint base_seed) {
+    uint random_int = hash(base_seed + gid);
+
+    return float(random_int) / 4294967295.0;
+}
+
+inline float rand_normal(uint gid, uint base_seed) {
+    float u1 = max(rand_uniform(gid * 2, base_seed), 1e-7f);
+    float u2 = rand_uniform(gid * 2 + 1, base_seed);
+
+    float r = sqrt(-2.0 * log(u1));
+    float theta = 2.0 * 3.14159265359 * u2;
+
+    return r * cos(theta);
+}
+
+#define NULLARY_OP(NAME0, OP0) \
+kernel void NAME0( \
+    device float* Out           [[ buffer(0) ]], \
+    constant uint& seed         [[ buffer(1) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    Out[gid] = OP0(gid, seed); \
+}
+NULLARY_OP(rand, rand_uniform)
+NULLARY_OP(randn, rand_normal)
+
 #define UNARY_OP(NAME1, OP1) \
 kernel void NAME1( \
     const device float* A       [[ buffer(0) ]], \
