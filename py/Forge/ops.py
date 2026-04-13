@@ -15,6 +15,14 @@ def _call_op(a: Array, b: Array, op_type: str) -> Array:
         h = _backend.mul(a._handle, b._handle)
     elif op_type == "div":
         h = _backend.div(a._handle, b._handle)
+    elif op_type == "iadd":
+        h = _backend.iadd(a._handle, b._handle)
+    elif op_type == "isub":
+        h = _backend.isub(a._handle, b._handle)
+    elif op_type == "imul":
+        h = _backend.imul(a._handle, b._handle)
+    elif op_type == "idiv":
+        h = _backend.idiv(a._handle, b._handle)
     else:
         raise ValueError("Unsupported operation type: " + op_type)
     return Array.from_handle(h)
@@ -50,6 +58,32 @@ def array_matmul(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return Array(_backend.matmul(self._handle, other._handle))
+
+
+def array_iadd(self, other):
+    if other == 0:
+        return self
+    if not isinstance(other, Array):
+        return NotImplemented
+    return _call_op(self, other, "iadd")
+
+
+def array_isub(self, other):
+    if not isinstance(other, Array):
+        return NotImplemented
+    return _call_op(self, other, "isub")
+
+
+def array_imul(self, other):
+    if not isinstance(other, Array):
+        return NotImplemented
+    return _call_op(self, other, "imul")
+
+
+def array_idiv(self, other):
+    if not isinstance(other, Array):
+        return NotImplemented
+    return _call_op(self, other, "idiv")
 
 
 UNARY_OPS = [
@@ -121,3 +155,7 @@ Array.__rmul__ = array_mul
 Array.__truediv__ = array_div
 Array.__rtruediv__ = array_div
 Array.__matmul__ = array_matmul
+Array.__iadd__ = array_iadd
+Array.__isub__ = array_isub
+Array.__imul__ = array_imul
+Array.__itruediv__ = array_idiv

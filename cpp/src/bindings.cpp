@@ -2,6 +2,7 @@
 
 #include "../include/array_binops.h"
 #include "../include/array_handle.h"
+#include "../include/array_inplaceops.h"
 #include "../include/array_nullaryops.h"
 #include "../include/array_unaryops.h"
 #include "../include/compiler.h"
@@ -84,6 +85,20 @@ NB_MODULE(_backend, m) {
     m.def("sinh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "sinh"); });
     m.def("cosh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "cosh"); });
     m.def("tanh", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "tanh"); });
+
+    // inplace_ops //
+    m.def("iadd", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
+        return array_inplaceops(a, b, "iadd");
+    });
+    m.def("isub", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
+        return array_inplaceops(a, b, "isub");
+    });
+    m.def("imul", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
+        return array_inplaceops(a, b, "imul");
+    });
+    m.def("idiv", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {
+        return array_inplaceops(a, b, "idiv");
+    });
 
     // binary_ops //
     m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {

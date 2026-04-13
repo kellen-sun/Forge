@@ -315,3 +315,15 @@ def test_rand_correct():
 
 
 # endregion
+
+# region -- INPLACE --
+
+
+def test_iadd():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    a2 = Array([[4.0, 5.0], [6.0, 7.0]])
+    a1 += a2
+    assert a1.list() == [[5.0, 7.0], [9.0, 11.0]]
+
+
+# endregion

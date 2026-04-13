@@ -19,6 +19,7 @@ find_package(nanobind CONFIG REQUIRED)
 add_library(forge_lib STATIC
     cpp/src/array_binops.mm
     cpp/src/array_handle.mm
+    cpp/src/array_inplaceops.mm
     cpp/src/array_nullaryops.mm
     cpp/src/array_unaryops.mm
     cpp/src/compiler.cpp

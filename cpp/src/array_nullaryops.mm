@@ -1,5 +1,4 @@
 #import <Metal/Metal.h>
-#import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 
 #include "../include/array_nullaryops.h"
 #include "../include/metal_source.h"

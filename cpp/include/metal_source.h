@@ -60,6 +60,30 @@ kernel void NAME0( \
 NULLARY_OP(rand, rand_uniform)
 NULLARY_OP(randn, rand_normal)
 
+#define INPLACE_OP(NAME10, OP10) \
+kernel void NAME10( \
+    device float* A       [[ buffer(0) ]], \
+    const device float* B       [[ buffer(1) ]], \
+    constant long* shape        [[ buffer(2) ]], \
+    constant long* strides_A    [[ buffer(3) ]], \
+    constant long& offset_A     [[ buffer(4) ]], \
+    constant long* strides_B    [[ buffer(5) ]], \
+    constant long& offset_B     [[ buffer(6) ]], \
+    constant uint& ndim         [[ buffer(7) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    /* Calculate Read Locations */ \
+    uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
+    uint idx_b = get_strided_index(gid, shape, strides_B, offset_B, ndim); \
+    \
+    A[idx_a] = A[idx_a] OP10 B[idx_b]; \
+}
+INPLACE_OP(iadd, +)
+INPLACE_OP(isub, -)
+INPLACE_OP(imul, *)
+INPLACE_OP(idiv, /)
+
 #define UNARY_OP(NAME1, OP1) \
 kernel void NAME1( \
     const device float* A       [[ buffer(0) ]], \
