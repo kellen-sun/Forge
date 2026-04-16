@@ -13,11 +13,10 @@ def test_addition_correct():
     assert result.list() == [[5.0, 7.0], [9.0, 11.0]]
 
 
-def test_addition_mismatch_shape():
+def test_addition_bcast():
     a1 = Array([[1, 2]])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
-        _ = a1 + a2
+    assert (a1 + a2).list() == [[2, 4], [4, 6]]
 
 
 def test_radd():
@@ -26,12 +25,6 @@ def test_radd():
     assert (a1 + a2).list() == [5, 7, 9]
     assert (a2 + a1).list() == [5, 7, 9]
     assert (a1.__radd__(a2)).list() == [5, 7, 9]
-
-
-def test_add_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a + 5
 
 
 # endregion
@@ -47,10 +40,10 @@ def test_subtraction_correct():
     assert result.list() == [[9.0, 3.0], [-1.0, 4.0]]
 
 
-def test_subtraction_mismatch_shape():
+def test_subtraction_bcast():
     a1 = Array([1, 2, 3])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         _ = a1 - a2
 
 
@@ -61,12 +54,6 @@ def test_subtraction_rsub():
     assert (a1 - a2).list() == [5.0, 5.0]
     # a2 - a1 = [-5.0, -5.0]
     assert (a2 - a1).list() == [-5.0, -5.0]
-
-
-def test_sub_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a - 5
 
 
 # endregion
@@ -90,10 +77,13 @@ def test_multiplication_commutative():
     assert (a1 * a2).list() == [3.0, 8.0]
 
 
-def test_mult_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a * 5
+def test_multiplication_bcast():
+    a1 = Array([[2.0, 5.0], [4.0, 1.0]])
+    a2 = Array([[3.0, 2.0]])
+    # Expected: [[6.0, 10.0], [2.0, 10.0]]
+    result = a1 * a2
+    assert result.list() == [[6.0, 10.0], [12.0, 2.0]]
+    assert (a1 * 2).list() == [[4.0, 10.0], [8.0, 2.0]]
 
 
 # endregion
@@ -124,17 +114,10 @@ def test_division_by_zero_safe_handling():
     assert np.isnan(result_list[2])
 
 
-def test_div_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a / 5
-
-
-def test_div_mismatch_shape():
+def test_division_bcast():
     a1 = Array([[1, 2]])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
-        _ = a1 / a2
+    assert (a1 / a2).list() == [[1, 1], [0.3333333432674408, 0.5]]
 
 
 # endregion
@@ -316,7 +299,7 @@ def test_rand_correct():
 
 # endregion
 
-# region -- INPLACE --
+# region --- INPLACE ---
 
 
 def test_iadd():
@@ -324,6 +307,27 @@ def test_iadd():
     a2 = Array([[4.0, 5.0], [6.0, 7.0]])
     a1 += a2
     assert a1.list() == [[5.0, 7.0], [9.0, 11.0]]
+
+
+# endregion
+
+# region --- ZERO ---
+
+
+def test_zeros():
+    a = Forge.zeros(2, 3)
+    assert a.list() == [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+
+
+# endregion
+
+# region --- SUM ---
+
+
+def test_sum_axis():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    assert a1.sum(axis=1).list() == [3.0, 7.0]
+    assert a1.sum(axis=-2, keepdims=True).list() == [[4.0, 6.0]]
 
 
 # endregion

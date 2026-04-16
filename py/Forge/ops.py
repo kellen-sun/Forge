@@ -5,8 +5,18 @@ from .array import Array
 
 
 def _call_op(a: Array, b: Array, op_type: str) -> Array:
-    if a.shape != b.shape:
-        raise ValueError(op_type + ": array shapes do not match")
+    if isinstance(a, (list, tuple)):
+        a = Array(a)
+    if isinstance(a, (int, float)):
+        a = Array([a])
+    if not isinstance(a, Array):
+        return NotImplemented
+    if isinstance(b, (list, tuple)):
+        b = Array(b)
+    if isinstance(b, (int, float)):
+        b = Array([b])
+    if not isinstance(b, Array):
+        return NotImplemented
     if op_type == "add":
         h = _backend.add(a._handle, b._handle)
     elif op_type == "sub":
@@ -29,28 +39,22 @@ def _call_op(a: Array, b: Array, op_type: str) -> Array:
 
 
 def array_add(self, other):
-    if other == 0:
-        return self
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "add")
 
 
 def array_sub(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "sub")
 
 
+def array_neg(self):
+    return _call_op(0, self, "sub")
+
+
 def array_mul(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "mul")
 
 
 def array_div(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "div")
 
 
@@ -61,28 +65,18 @@ def array_matmul(self, other):
 
 
 def array_iadd(self, other):
-    if other == 0:
-        return self
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "iadd")
 
 
 def array_isub(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "isub")
 
 
 def array_imul(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "imul")
 
 
 def array_idiv(self, other):
-    if not isinstance(other, Array):
-        return NotImplemented
     return _call_op(self, other, "idiv")
 
 
@@ -113,6 +107,7 @@ UNARY_OPS = [
     "tanh",
 ]
 
+
 for op_name in UNARY_OPS:
     backend_fn = getattr(_backend, op_name)
 
@@ -123,10 +118,9 @@ for op_name in UNARY_OPS:
     globals()[op_name] = unary_wrapper
     setattr(Array, op_name, unary_wrapper)
 
-NULLARY_OPS = [
-    "rand",
-    "randn",
-]
+
+NULLARY_OPS = ["rand", "randn", "zeros"]
+
 
 for op_name in NULLARY_OPS:
     backend_fn = getattr(_backend, op_name)
@@ -146,10 +140,32 @@ for op_name in NULLARY_OPS:
     globals()[op_name] = nullary_wrapper
 
 
+def sum(self, axis=None, keepdims=False):
+    if axis is None:
+        h = _backend.sum_global(self._handle, keepdims)
+        out_array = Array.from_handle(h)
+        return out_array
+
+    if not isinstance(axis, int):
+        raise TypeError("axis must be an integer or None")
+
+    if axis < 0:
+        axis += len(self.shape)
+    if axis < 0 or axis >= len(self.shape):
+        raise IndexError(
+            f"Array: Axis {axis} is out of bounds for Array of dimension {len(self.shape)}"
+        )
+
+    h = _backend.sum_axis(self._handle, axis, keepdims)
+    return Array.from_handle(h)
+
+
 Array.__add__ = array_add
 Array.__radd__ = array_add
+Array.__pos__ = lambda x: x
 Array.__sub__ = array_sub
 Array.__rsub__ = array_sub
+Array.__neg__ = array_neg
 Array.__mul__ = array_mul
 Array.__rmul__ = array_mul
 Array.__truediv__ = array_div
@@ -159,3 +175,4 @@ Array.__iadd__ = array_iadd
 Array.__isub__ = array_isub
 Array.__imul__ = array_imul
 Array.__itruediv__ = array_idiv
+Array.sum = sum

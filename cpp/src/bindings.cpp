@@ -4,6 +4,7 @@
 #include "../include/array_handle.h"
 #include "../include/array_inplaceops.h"
 #include "../include/array_nullaryops.h"
+#include "../include/array_sum.h"
 #include "../include/array_unaryops.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
@@ -52,6 +53,8 @@ NB_MODULE(_backend, m) {
           [](const std::vector<int64_t>& shape) { return array_nullaryops(shape, "rand"); });
     m.def("randn",
           [](const std::vector<int64_t>& shape) { return array_nullaryops(shape, "randn"); });
+    m.def("zeros",
+          [](const std::vector<int64_t>& shape) { return array_nullaryops(shape, "zeros"); });
 
     // unary_ops //
     m.def("exp", [](const std::shared_ptr<ArrayHandle>& a) { return array_unaryops(a, "exp"); });
@@ -115,6 +118,10 @@ NB_MODULE(_backend, m) {
     });
     m.def("matmul", [](const std::shared_ptr<ArrayHandle>& a,
                        const std::shared_ptr<ArrayHandle>& b) { return array_matmul(a, b); });
+
+    // reduction_ops //
+    m.def("sum_global", &sum_global);
+    m.def("sum_axis", &sum_axis);
 
     // COMPILE AND RUN //
     nb::class_<Graph>(m, "Graph").def("execute", &Graph::execute);
