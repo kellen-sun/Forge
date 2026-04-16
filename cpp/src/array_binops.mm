@@ -34,24 +34,48 @@ std::vector<int64_t> broadcast_shapes(std::span<const int64_t>&& a_shape,
     return out;
 }
 
+std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
+                                       const std::vector<int64_t>& strides,
+                                       const std::vector<int64_t>& final_shape) {
+    std::vector<int64_t> bcast_strides(final_shape.size(), 0);
+    int offset = final_shape.size() - shape.size();
+
+    for (size_t i = 0; i < shape.size(); ++i) {
+        // If the original dim was 1 but the final dim is larger, stride becomes 0
+        if (shape[i] == 1 && final_shape[offset + i] > 1) {
+            bcast_strides[offset + i] = 0;
+        } else {
+            bcast_strides[offset + i] = strides[i];
+        }
+    }
+    return bcast_strides;
+};
+
 std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
                                           const std::shared_ptr<ArrayHandle>& B,
                                           const std::string& op_name) {
     const auto& shapeA = A->shape();
     const auto& shapeB = B->shape();
+    std::vector<int64_t> out_shape;
 
-    if (shapeA != shapeB) {
-        throw std::runtime_error("array_binops: shape mismatch");
+    if (shapeA == shapeB) {
+        out_shape = shapeA;
+    } else {
+        out_shape = broadcast_shapes(shapeA, shapeB);
     }
 
     auto defaultForgeHandle = get_default_forge();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
 
     // allocate output ArrayHandle
-    auto out = std::make_shared<ArrayHandle>(shapeA, defaultForgeHandle->device_ptr());
+    auto out = std::make_shared<ArrayHandle>(out_shape, defaultForgeHandle->device_ptr());
+    auto out_numel = numel_from_shape(out_shape);
+
+    std::vector<int64_t> strides_A = get_bcast_strides(A->shape(), A->strides(), out_shape);
+    std::vector<int64_t> strides_B = get_bcast_strides(B->shape(), B->strides(), out_shape);
 
     id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)B->metal_buffer();
@@ -68,20 +92,20 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
     [enc setBuffer:bufB offset:0 atIndex:1];
     [enc setBuffer:bufOut offset:0 atIndex:2];
 
-    uint ndim = (uint)shapeA.size();
+    uint ndim = (uint)out_shape.size();
 
     if (ndim == 0) {
         uint64_t scalar_shape = 1;
         [enc setBytes:&scalar_shape length:8 atIndex:3];
     } else {
-        [enc setBytes:shapeA.data() length:ndim * 8 atIndex:3];
+        [enc setBytes:out_shape.data() length:ndim * 8 atIndex:3];
     }
     size_t current_offsetA = A->offset();
     if (ndim == 0) {
         uint64_t scalar_stride = 0;
         [enc setBytes:&scalar_stride length:8 atIndex:4];
     } else {
-        [enc setBytes:A->strides().data() length:ndim * 8 atIndex:4];
+        [enc setBytes:strides_A.data() length:ndim * 8 atIndex:4];
     }
     [enc setBytes:&current_offsetA length:sizeof(size_t) atIndex:5];
     size_t current_offsetB = B->offset();
@@ -89,14 +113,14 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
         uint64_t scalar_stride = 0;
         [enc setBytes:&scalar_stride length:8 atIndex:6];
     } else {
-        [enc setBytes:B->strides().data() length:ndim * 8 atIndex:6];
+        [enc setBytes:strides_B.data() length:ndim * 8 atIndex:6];
     }
     [enc setBytes:&current_offsetB length:sizeof(size_t) atIndex:7];
 
     if (ndim == 0) ndim = 1;
     [enc setBytes:&ndim length:4 atIndex:8];
 
-    MTLSize grid = MTLSizeMake(numel_from_shape(shapeA), 1, 1);
+    MTLSize grid = MTLSizeMake(out_numel, 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];

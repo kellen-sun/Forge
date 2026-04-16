@@ -7,14 +7,18 @@
 std::shared_ptr<ArrayHandle> array_nullaryops(const std::vector<int64_t>& shape,
                                               const std::string& op_name) {
     auto defaultForgeHandle = get_default_forge();
+
+    // allocate output ArrayHandle
+    if (op_name == "zeros") {
+        return std::make_shared<ArrayHandle>(shape, defaultForgeHandle->device_ptr(), true);
+    }
+    auto out = std::make_shared<ArrayHandle>(shape, defaultForgeHandle->device_ptr());
+
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
     uint32_t seed = defaultForgeHandle->get_seed();
 
     // compile pipeline on first call
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
-
-    // allocate output ArrayHandle
-    auto out = std::make_shared<ArrayHandle>(shape, defaultForgeHandle->device_ptr());
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
 
     id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>)out->metal_buffer();
 

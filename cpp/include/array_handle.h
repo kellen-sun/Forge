@@ -21,7 +21,7 @@ class ArrayHandle {
 
    public:
     // CONSTRUCTORS //
-    ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr);
+    ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr, bool zero = false);
     ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev = nullptr);
     ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
                 std::vector<int64_t> new_strides, size_t new_offset);

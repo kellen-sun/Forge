@@ -10,7 +10,7 @@ ArrayStorage::~ArrayStorage() {
     if (write_event_) id old_event = (__bridge_transfer id)write_event_;
 }
 
-ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
+ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev, bool zero)
     : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
@@ -18,6 +18,7 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes options:MTLResourceStorageModeShared];
+    if (zero) memset(buf.contents, 0, nbytes);
 
     storage_->metal_buffer_ = (__bridge_retained void*)buf;
 }
@@ -70,7 +71,7 @@ void ArrayHandle::set_event(void* event) {
 void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                             std::vector<int64_t> strides, size_t offset) {
     std::string op_name = "copy_view";
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
 
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)get_default_forge()->queue_ptr();
     id<MTLCommandBuffer> cmd = [queue commandBuffer];

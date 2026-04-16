@@ -1,5 +1,6 @@
 #import <Metal/Metal.h>
 
+#include "../include/array_binops.h"
 #include "../include/array_inplaceops.h"
 #include "../include/metal_source.h"
 #include "../include/metal_utils.h"
@@ -9,16 +10,14 @@ std::shared_ptr<ArrayHandle> array_inplaceops(const std::shared_ptr<ArrayHandle>
                                               const std::string& op_name) {
     const auto& shapeA = A->shape();
     const auto& shapeB = B->shape();
-
-    if (shapeA != shapeB) {
-        throw std::runtime_error("array_binops: shape mismatch");
-    }
+    std::vector<int64_t> out_shape = broadcast_shapes(shapeA, shapeB);
+    if (out_shape != shapeA) throw std::runtime_error("array_inplaceops: broadcast failed");
 
     auto defaultForgeHandle = get_default_forge();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
 
     id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)B->metal_buffer();
@@ -50,11 +49,12 @@ std::shared_ptr<ArrayHandle> array_inplaceops(const std::shared_ptr<ArrayHandle>
     }
     [enc setBytes:&current_offsetA length:sizeof(size_t) atIndex:4];
     size_t current_offsetB = B->offset();
+    std::vector<int64_t> strides_B = get_bcast_strides(B->shape(), B->strides(), shapeA);
     if (ndim == 0) {
         uint64_t scalar_stride = 0;
         [enc setBytes:&scalar_stride length:8 atIndex:5];
     } else {
-        [enc setBytes:B->strides().data() length:ndim * 8 atIndex:5];
+        [enc setBytes:strides_B.data() length:ndim * 8 atIndex:5];
     }
     [enc setBytes:&current_offsetB length:sizeof(size_t) atIndex:6];
 

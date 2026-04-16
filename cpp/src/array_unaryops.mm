@@ -10,7 +10,7 @@ std::shared_ptr<ArrayHandle> array_unaryops(const std::shared_ptr<ArrayHandle>& 
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
     // compile pipeline on first call
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
 
     // allocate output ArrayHandle
     auto out = std::make_shared<ArrayHandle>(A->shape(), defaultForgeHandle->device_ptr());

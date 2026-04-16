@@ -4,8 +4,12 @@
 
 #include "array_handle.h"
 
-std::vector<int64_t> broadcast_shapes(std::span<const int64_t>& a_shape,
-                                      std::span<const int64_t>& b_shape);
+std::vector<int64_t> broadcast_shapes(std::span<const int64_t>&& a_shape,
+                                      std::span<const int64_t>&& b_shape);
+
+std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
+                                       const std::vector<int64_t>& strides,
+                                       const std::vector<int64_t>& final_shape);
 
 std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
                                           const std::shared_ptr<ArrayHandle>& B,
