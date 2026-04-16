@@ -2,7 +2,7 @@
 
 #include <string>
 
-const char* const ELEMENTWISE_METAL_SOURCE = R"(
+const char* const METAL_SOURCE = R"(
 #include <metal_stdlib>
 using namespace metal;
 
@@ -167,4 +167,65 @@ kernel void copy_view(
     uint idx_src = get_strided_index(gid, shape, strides_src, offset_src, ndim);
 
     Dest[idx_dst] = Src[idx_src];
-})";
+}
+
+kernel void reduce_sum_global(
+    const device float* Input   [[ buffer(0) ]],
+    device float* Output        [[ buffer(1) ]],
+    constant long* in_shape     [[ buffer(2) ]],
+    constant long* in_strides   [[ buffer(3) ]],
+    constant long& in_offset    [[ buffer(4) ]],
+    constant uint& in_ndim      [[ buffer(5) ]],
+    constant uint& in_numel     [[ buffer(6) ]],
+
+    uint gid                    [[ thread_position_in_grid ]])
+{
+    if (gid > 0) return;
+    float total = 0.0;
+    for (uint i = 0; i < in_numel; ++i) {
+        uint physical_idx = in_offset;
+        uint remaining = i;
+        for (int d = in_ndim - 1; d >= 0; --d) {
+            uint coord = remaining % in_shape[d];
+            physical_idx += coord * in_strides[d];
+            remaining /= in_shape[d];
+        }
+        total += Input[physical_idx];
+    }
+    Output[0] = total;
+}
+
+kernel void reduce_sum_axis(
+    const device float* Input   [[ buffer(0) ]],
+    device float* Output        [[ buffer(1) ]],
+
+    constant long* out_shape    [[ buffer(2) ]],
+    constant uint& out_ndim     [[ buffer(3) ]],
+
+    constant long* in_shape     [[ buffer(4) ]],
+    constant long* in_strides   [[ buffer(5) ]],
+    constant long& in_offset    [[ buffer(6) ]],
+
+    constant uint& reduce_axis  [[ buffer(7) ]],
+    constant uint& out_numel    [[ buffer(8) ]],
+
+    uint gid                    [[ thread_position_in_grid ]])
+{
+    if (gid >= out_numel) return;
+    uint remaining = gid;
+    uint input_base_idx = in_offset;
+    for (int i = out_ndim - 1; i >= 0; --i) {
+        uint coord = remaining % out_shape[i];
+        uint in_dim = (i >= reduce_axis) ? i + 1 : i;
+        input_base_idx += coord * in_strides[in_dim];
+        remaining /= out_shape[i];
+    }
+    float total = 0.0;
+    uint axis_size = in_shape[reduce_axis];
+    uint axis_stride = in_strides[reduce_axis];
+    for (uint j = 0; j < axis_size; ++j) {
+        total += Input[input_base_idx + (j * axis_stride)];
+    }
+    Output[gid] = total;
+}
+)";

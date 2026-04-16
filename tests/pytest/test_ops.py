@@ -330,4 +330,10 @@ def test_sum_axis():
     assert a1.sum(axis=-2, keepdims=True).list() == [[4.0, 6.0]]
 
 
+def test_sum_global():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    assert a1.sum().list() == 10.0
+    assert a1.sum(keepdims=True).list() == [[10.0]]
+
+
 # endregion

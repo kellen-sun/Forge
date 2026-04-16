@@ -122,6 +122,9 @@ std::shared_ptr<ArrayHandle> array_binops(const std::shared_ptr<ArrayHandle>& A,
 
     MTLSize grid = MTLSizeMake(out_numel, 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
+    if (threads.width > grid.width) {
+        threads.width = grid.width;
+    }
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];
 

@@ -34,6 +34,9 @@ std::shared_ptr<ArrayHandle> array_nullaryops(const std::vector<int64_t>& shape,
 
     MTLSize grid = MTLSizeMake(numel_from_shape(shape), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
+    if (threads.width > grid.width) {
+        threads.width = grid.width;
+    }
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];
 

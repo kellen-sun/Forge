@@ -50,6 +50,9 @@ std::shared_ptr<ArrayHandle> array_unaryops(const std::shared_ptr<ArrayHandle>& 
 
     MTLSize grid = MTLSizeMake(numel_from_shape(A->shape()), 1, 1);
     MTLSize threads = MTLSizeMake(256, 1, 1);
+    if (threads.width > grid.width) {
+        threads.width = grid.width;
+    }
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];
 
