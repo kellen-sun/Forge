@@ -21,7 +21,6 @@ add_library(forge_lib STATIC
     cpp/src/array_handle.mm
     cpp/src/array_matmul.mm
     cpp/src/array_sum.mm
-    cpp/src/broadcast.cpp
     cpp/src/compiler.cpp
     cpp/src/compiler.mm
     cpp/src/forge_handle.mm

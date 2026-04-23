@@ -8,7 +8,9 @@ std::shared_ptr<ArrayHandle> sum_global(const std::shared_ptr<ArrayHandle>& A, b
     auto defaultForgeHandle = get_default_forge();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
-    id<MTLComputePipelineState> pipeline = get_pipeline("reduce_sum_global", METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline =
+        (__bridge_transfer id<MTLComputePipelineState>)get_pipeline("reduce_sum_global",
+                                                                    METAL_SOURCE);
 
     std::vector<int64_t> out_shape;
     if (keepdims) {
@@ -65,7 +67,9 @@ std::shared_ptr<ArrayHandle> sum_axis(const std::shared_ptr<ArrayHandle>& A, siz
     auto defaultForgeHandle = get_default_forge();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
 
-    id<MTLComputePipelineState> pipeline = get_pipeline("reduce_sum_axis", METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline =
+        (__bridge_transfer id<MTLComputePipelineState>)get_pipeline("reduce_sum_axis",
+                                                                    METAL_SOURCE);
 
     std::vector<int64_t> out_shape = A->shape();
     if (keepdims) {

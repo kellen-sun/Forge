@@ -2,29 +2,23 @@
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 
 #include "../include/array_matmul.h"
-#include "../include/broadcast.h"
 #include "../include/metal_utils.h"
 
-namespace {
-
-// Returns (possibly-repacked handle, is_transposed). Matmul only wants
-// contiguous row-major or column-major operands; anything else gets copied
-// into a fresh contiguous buffer so MPS can consume it.
 std::pair<std::shared_ptr<ArrayHandle>, bool> prepare(const std::shared_ptr<ArrayHandle>& h) {
     int ndim = h->shape().size();
     int64_t R = h->shape()[ndim - 2];
     int64_t C = h->shape()[ndim - 1];
     int64_t sR = h->strides()[ndim - 2];
     int64_t sC = h->strides()[ndim - 1];
+    // Contiguous data regular
     if (sR == C && sC == 1) return {h, false};
+    // Transposed / Col-Major (Strides: 1, R)
     if (sR == 1 && sC == R) return {h, true};
 
     auto new_handle = std::make_shared<ArrayHandle>(h->shape());
     new_handle->copy_from(h, new_handle->shape(), new_handle->strides(), 0);
     return {new_handle, false};
 }
-
-}  // namespace
 
 std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
                                           const std::shared_ptr<ArrayHandle>& B) {
@@ -35,13 +29,13 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     auto Bstrides = B->strides();
     if (A->shape().size() == 1) {
         squeeze_a = true;
-        // (K,) -> (1, K)
+        // Promote (K,) -> (1, K)
         Astrides.insert(Astrides.begin(), Ashape[0] * Astrides[0]);
         Ashape.insert(Ashape.begin(), 1);
     }
     if (B->shape().size() == 1) {
         squeeze_b = true;
-        // (K,) -> (K, 1)
+        // Promote (K,) -> (K, 1)
         Bshape.push_back(1);
         Bstrides.push_back(1);
     }
@@ -56,25 +50,27 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     if (K_a != K_b) throw std::runtime_error("matmul: dimension mismatch");
     int64_t K = K_a;
 
+    // Compute batch dimensions separately from M, N
     auto batch_shape =
         broadcast_shapes({Ashape.begin(), Ashape.end() - 2}, {Bshape.begin(), Bshape.end() - 2});
 
+    // Build full output shape: batch_dims + M + N
     auto out_shape = batch_shape;
     out_shape.push_back(M);
     out_shape.push_back(N);
 
     auto c = std::make_shared<ArrayHandle>(out_shape);
 
-    // Strides for batch dimensions only (exclude M, N). Broadcast dims and
-    // missing leading dims both get stride 0.
+    // Compute strides for batch dimensions only (excluding M, N)
     auto get_batch_strides = [&](const std::vector<int64_t>& shape) {
         std::vector<int64_t> strides;
         int ndim = shape.size();
-        int batch_ndim = ndim - 2;
+        int batch_ndim = ndim - 2;  // Number of batch dims in this tensor
         int offset = batch_shape.size() - batch_ndim;
         auto dense = make_strides(shape);
         for (int i = 0; i < batch_shape.size(); ++i) {
             int idx = i - offset;
+            // If dim missing (idx < 0) or dim is 1 -> Stride is 0 (Broadcast)
             if (idx < 0 || shape[idx] == 1)
                 strides.push_back(0);
             else
@@ -119,6 +115,7 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)b->metal_buffer();
     id<MTLBuffer> bufC = (__bridge id<MTLBuffer>)c->metal_buffer();
 
+    // total_ops only counts batch dimensions (not M, N)
     size_t total_ops = 1;
     for (auto s : batch_shape) total_ops *= s;
 
@@ -128,6 +125,7 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     size_t off_b = b->offset() * dsize;
     size_t off_c = 0;
 
+    // Loop only over batch dimensions
     for (size_t op = 0; op < total_ops; ++op) {
         @autoreleasepool {
             MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:bufA offset:off_a descriptor:descA];
@@ -156,13 +154,16 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
 
     std::vector<int64_t> final_shape = c->shape();
     if (squeeze_a && squeeze_b) {
+        // Case: (K,) @ (K,) -> Scalar. Current c: (..., 1, 1). Remove last two dims.
         if (final_shape.size() >= 2) {
             final_shape.resize(final_shape.size() - 2);
         }
     } else if (squeeze_a) {
+        // Case: (K,) @ (K, N) -> (N,). Current c: (..., 1, N). Remove dim -2.
         auto it = final_shape.end() - 2;
         final_shape.erase(it);
     } else if (squeeze_b) {
+        // Case: (M, K) @ (K,) -> (M,). Current c: (..., M, 1). Remove dim -1.
         final_shape.pop_back();
     }
 

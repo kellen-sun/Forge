@@ -1,14 +1,14 @@
-#include "../include/metal_utils.h"
+#import <Metal/Metal.h>
 
 #include <iostream>
 #include <map>
 #include <vector>
 
 #include "../include/array_handle.h"
-#include "../include/broadcast.h"
 #include "../include/metal_source.h"
+#include "../include/metal_utils.h"
 
-id<MTLComputePipelineState> get_pipeline(const std::string& op_name, const char* metal_c_string) {
+void* get_pipeline(const std::string& op_name, const char* metal_c_string) {
     static std::map<std::string, id<MTLComputePipelineState>> cache;
     static id<MTLLibrary> library = nil;
     auto defaultForgeHandle = get_default_forge();
@@ -27,7 +27,7 @@ id<MTLComputePipelineState> get_pipeline(const std::string& op_name, const char*
     }
 
     if (cache.find(op_name) != cache.end()) {
-        return cache[op_name];
+        return (__bridge_retained void*)cache[op_name];
     }
     NSString* nameNS = [NSString stringWithUTF8String:op_name.c_str()];
     id<MTLFunction> fn = [library newFunctionWithName:nameNS];
@@ -42,16 +42,16 @@ id<MTLComputePipelineState> get_pipeline(const std::string& op_name, const char*
         throw std::runtime_error("Metal Error: Failed to create pipeline state for " + op_name);
     }
     cache[op_name] = pipeline;
-    return pipeline;
+    return (__bridge_retained void*)pipeline;
 }
 
-id<MTLCommandBuffer> launch_elementwise(const std::string& op_name,
-                                        std::span<const int64_t> out_shape,
-                                        std::initializer_list<StridedInput> inputs,
-                                        id<MTLBuffer> out_buf) {
+std::shared_ptr<ArrayHandle> launch_elementwise(
+    const std::string& op_name, const std::vector<int64_t>& out_shape,
+    std::initializer_list<const std::shared_ptr<ArrayHandle>> inputs, bool dedicated_out) {
     auto fh = get_default_forge();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)fh->queue_ptr();
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline =
+        (__bridge_transfer id<MTLComputePipelineState>)get_pipeline(op_name, METAL_SOURCE);
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd)
@@ -62,11 +62,14 @@ id<MTLCommandBuffer> launch_elementwise(const std::string& op_name,
     [enc setComputePipelineState:pipeline];
 
     NSUInteger slot = 0;
-    for (const auto& in : inputs) {
-        [enc setBuffer:in.buf offset:0 atIndex:slot++];
+    for (const auto& inp : inputs) {
+        [enc setBuffer:(__bridge id<MTLBuffer>)inp->metal_buffer() offset:0 atIndex:slot++];
     }
-    if (out_buf) {
-        [enc setBuffer:out_buf offset:0 atIndex:slot++];
+    auto out = dedicated_out ? std::make_shared<ArrayHandle>(out_shape, fh->device_ptr())
+                             : *std::begin(inputs);
+    if (dedicated_out) {
+        id<MTLBuffer> out_metalbuf = (__bridge id<MTLBuffer>)out->metal_buffer();
+        [enc setBuffer:out_metalbuf offset:0 atIndex:slot++];
     }
 
     // 0-d scalars are dispatched as a single-element 1-d kernel: shape=[1], stride=[0], ndim=1.
@@ -83,14 +86,14 @@ id<MTLCommandBuffer> launch_elementwise(const std::string& op_name,
 
     std::vector<std::vector<int64_t>> stride_store;
     stride_store.reserve(inputs.size());
-    for (const auto& in : inputs) {
-        stride_store.push_back(get_bcast_strides(in.shape, in.strides, out_shape));
+    for (const auto& inp : inputs) {
+        stride_store.push_back(get_bcast_strides(inp->shape(), inp->strides(), out_shape));
         if (ndim_raw == 0) {
             [enc setBytes:&scalar_stride length:8 atIndex:slot++];
         } else {
             [enc setBytes:stride_store.back().data() length:ndim_raw * 8 atIndex:slot++];
         }
-        size_t off = in.offset;
+        size_t off = inp->offset();
         [enc setBytes:&off length:sizeof(size_t) atIndex:slot++];
     }
 
@@ -105,5 +108,6 @@ id<MTLCommandBuffer> launch_elementwise(const std::string& op_name,
     [enc endEncoding];
 
     [cmd commit];
-    return cmd;
+    out->set_event((__bridge void*)cmd);
+    return out;
 }
