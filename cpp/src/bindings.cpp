@@ -1,11 +1,9 @@
 #include "../include/bindings.h"
 
-#include "../include/array_binops.h"
+#include "../include/array_elementwise.h"
 #include "../include/array_handle.h"
-#include "../include/array_inplaceops.h"
-#include "../include/array_nullaryops.h"
+#include "../include/array_matmul.h"
 #include "../include/array_sum.h"
-#include "../include/array_unaryops.h"
 #include "../include/compiler.h"
 #include "../include/graph.h"
 
