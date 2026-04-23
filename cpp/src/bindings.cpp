@@ -41,6 +41,7 @@ NB_MODULE(_backend, m) {
     m.def("reshape", &array_reshape);
     m.def("array_shape", &array_shape);
     m.def("array_to_list", &array_to_list);
+    m.def("infer_shape_and_flatten", &infer_shape_and_flatten_py, nb::arg("data"));
 
     // OPERATIONS //
     m.def("add", [](const std::shared_ptr<ArrayHandle>& a, const std::shared_ptr<ArrayHandle>& b) {

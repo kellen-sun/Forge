@@ -46,6 +46,95 @@ nb::object array_to_list(const ArrayHandle& h) {
     return build(0, h.offset());
 }
 
+static std::vector<int64_t> infer_recursive(nb::handle x, std::vector<float>& flat) {
+    PyObject* obj = x.ptr();
+
+    if (PyFloat_Check(obj)) {
+        flat.push_back(static_cast<float>(PyFloat_AsDouble(obj)));
+        return {};
+    }
+    if (PyLong_Check(obj)) {
+        double d = PyLong_AsDouble(obj);
+        if (d == -1.0 && PyErr_Occurred()) throw nb::python_error();
+        flat.push_back(static_cast<float>(d));
+        return {};
+    }
+
+    if (PyList_Check(obj) || PyTuple_Check(obj)) {
+        bool is_list = PyList_Check(obj);
+        Py_ssize_t len = is_list ? PyList_GET_SIZE(obj) : PyTuple_GET_SIZE(obj);
+        if (len == 0) return {0};
+
+        std::vector<int64_t> first_sub;
+        for (Py_ssize_t i = 0; i < len; ++i) {
+            PyObject* item = is_list ? PyList_GET_ITEM(obj, i) : PyTuple_GET_ITEM(obj, i);
+            std::vector<int64_t> sub = infer_recursive(nb::handle(item), flat);
+            if (i == 0) {
+                first_sub = std::move(sub);
+            } else if (sub != first_sub) {
+                PyErr_SetString(PyExc_ValueError, "ragged nested lists: differing inner shapes");
+                throw nb::python_error();
+            }
+        }
+        std::vector<int64_t> result;
+        result.reserve(first_sub.size() + 1);
+        result.push_back(static_cast<int64_t>(len));
+        result.insert(result.end(), first_sub.begin(), first_sub.end());
+        return result;
+    }
+
+    if (PyBytes_Check(obj) || PyByteArray_Check(obj) || PyMemoryView_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "shape required for raw bytes; use Array.from_buffer(buf, shape) and "
+                        "specify shape");
+        throw nb::python_error();
+    }
+
+    static PyObject* array_type = []() -> PyObject* {
+        PyObject* mod = PyImport_ImportModule("array");
+        if (!mod) {
+            PyErr_Clear();
+            return nullptr;
+        }
+        PyObject* t = PyObject_GetAttrString(mod, "array");
+        Py_DECREF(mod);
+        if (!t) PyErr_Clear();
+        return t;
+    }();
+    if (array_type && PyObject_IsInstance(obj, array_type) == 1) {
+        PyObject* typecode_obj = PyObject_GetAttrString(obj, "typecode");
+        if (!typecode_obj) throw nb::python_error();
+        const char* typecode = PyUnicode_AsUTF8(typecode_obj);
+        bool is_float = typecode && std::string(typecode) == "f";
+        Py_DECREF(typecode_obj);
+        if (!is_float) {
+            PyErr_SetString(PyExc_TypeError, "array must be of type 'float32'");
+            throw nb::python_error();
+        }
+        Py_buffer buf;
+        if (PyObject_GetBuffer(obj, &buf, PyBUF_SIMPLE) != 0) throw nb::python_error();
+        Py_ssize_t n = buf.len / static_cast<Py_ssize_t>(sizeof(float));
+        const float* src = static_cast<const float*>(buf.buf);
+        flat.insert(flat.end(), src, src + n);
+        PyBuffer_Release(&buf);
+        return {static_cast<int64_t>(n)};
+    }
+
+    std::string msg = std::string("unsupported input type: ") +
+                      nb::str(nb::handle(reinterpret_cast<PyObject*>(Py_TYPE(obj)))).c_str();
+    PyErr_SetString(PyExc_TypeError, msg.c_str());
+    throw nb::python_error();
+}
+
+std::pair<std::vector<int64_t>, std::shared_ptr<ArrayHandle>> infer_shape_and_flatten_py(
+    nb::object data) {
+    std::vector<float> flat;
+    std::vector<int64_t> shape = infer_recursive(data, flat);
+    void* dev = get_default_forge()->device_ptr();
+    auto handle = std::make_shared<ArrayHandle>(flat.data(), shape, dev);
+    return {std::move(shape), std::move(handle)};
+}
+
 std::vector<Node> parse_nodes(nb::list flat_nodes) {
     std::vector<Node> nodes;
     nodes.reserve(flat_nodes.size());
