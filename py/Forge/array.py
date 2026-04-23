@@ -5,39 +5,6 @@ from . import _backend
 from .utils import _indexing_helper
 
 
-def _infer_shape_and_flatten(x):
-    """
-    Takes nested lists/tuples and returns (shape, flat_list_of_floats).
-    ValueError if missing values. Only floats for now.
-    """
-    if isinstance(x, (int, float)):
-        return (), [float(x)]
-    if isinstance(x, (list, tuple)):
-        # Recurse
-        if len(x) == 0:
-            return (0,), []
-        shapes = []
-        flat = []
-        for el in x:
-            s, f = _infer_shape_and_flatten(el)
-            shapes.append(s)
-            flat.extend(f)
-        first = shapes[0]
-        for s in shapes:
-            if s != first:
-                raise ValueError("ragged nested lists: differing inner shapes")
-        return (len(x),) + first, flat
-    if isinstance(x, (bytes, bytearray, memoryview)):
-        raise TypeError(
-            "shape required for raw bytes; use Array.from_buffer(buf, shape) and specify shape"
-        )
-    if isinstance(x, array):
-        if x.typecode != "f":
-            raise TypeError("array must be of type 'float32'")
-        return (len(x),), list(x)
-    raise TypeError(f"unsupported input type: {type(x)}")
-
-
 class Array:
     """
     Python Array that the library provides.
@@ -82,12 +49,8 @@ class Array:
 
         else:
             # Nested Python lists/tuples
-            shape, flat = _infer_shape_and_flatten(data)
-            buf = array("f", flat)
-            self._keep = buf
-            mv = memoryview(buf)
-            self._handle = _backend.create_array_from_buffer(mv, list(shape))
-            self.shape = shape
+            shape, self._handle = _backend.infer_shape_and_flatten(data)
+            self.shape = tuple(shape)
             return
 
     @classmethod
