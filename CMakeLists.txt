@@ -51,9 +51,7 @@ else()
     target_compile_options(_backend PRIVATE "-O3")
     # Put output _backend in python package
     target_link_libraries(_backend PRIVATE forge_lib)
-    set_target_properties(_backend PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/py/Forge
-    )
+    install(TARGETS _backend DESTINATION Forge)
 endif()
 
 # Build gtests
