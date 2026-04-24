@@ -1,0 +1,16 @@
+[build-system]
+requires = ["scikit-build-core>=0.5.0", "nanobind>=1.9.2"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "forge-metal"
+version = "0.0.1"
+description = "Forge crafts Metal: an Array framework with eager execution and JIT graph compilation for Apple Silicon GPUs"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.scikit-build]
+wheel.packages = ["py/Forge"]
+
+cmake.args = ["-DBUILD_TYPE=Release"]
