@@ -54,6 +54,7 @@ def test_subtraction_rsub():
     assert (a1 - a2).list() == [5.0, 5.0]
     # a2 - a1 = [-5.0, -5.0]
     assert (a2 - a1).list() == [-5.0, -5.0]
+    assert (10.0 - a1).list() == [0.0, -10.0]
 
 
 # endregion

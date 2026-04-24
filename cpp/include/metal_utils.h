@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <initializer_list>
-#include <span>
 #include <string>
 
 #include "array_handle.h"

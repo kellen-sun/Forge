@@ -4,80 +4,44 @@ from . import _backend
 from .array import Array
 
 
-def _call_op(a: Array, b: Array, op_type: str) -> Array:
-    if isinstance(a, (list, tuple)):
-        a = Array(a)
-    if isinstance(a, (int, float)):
-        a = Array([a])
-    if not isinstance(a, Array):
-        return NotImplemented
-    if isinstance(b, (list, tuple)):
-        b = Array(b)
-    if isinstance(b, (int, float)):
-        b = Array([b])
-    if not isinstance(b, Array):
-        return NotImplemented
-    if op_type == "add":
-        h = _backend.add(a._handle, b._handle)
-    elif op_type == "sub":
-        h = _backend.sub(a._handle, b._handle)
-    elif op_type == "mul":
-        h = _backend.mul(a._handle, b._handle)
-    elif op_type == "div":
-        h = _backend.div(a._handle, b._handle)
-    elif op_type == "iadd":
-        h = _backend.iadd(a._handle, b._handle)
-    elif op_type == "isub":
-        h = _backend.isub(a._handle, b._handle)
-    elif op_type == "imul":
-        h = _backend.imul(a._handle, b._handle)
-    elif op_type == "idiv":
-        h = _backend.idiv(a._handle, b._handle)
-    else:
-        raise ValueError("Unsupported operation type: " + op_type)
-    return Array.from_handle(h)
+def _to_array(x):
+    if isinstance(x, Array):
+        return x
+    if isinstance(x, (list, tuple)):
+        return Array(x)
+    if isinstance(x, (int, float)):
+        return Array([x])
+    return NotImplemented
 
 
-def array_add(self, other):
-    return _call_op(self, other, "add")
+def _make_binop(op_name):
+    backend_fn = getattr(_backend, op_name)
+
+    def method(self, other):
+        a, b = self, _to_array(other)
+        if b is NotImplemented:
+            return NotImplemented
+        return Array.from_handle(backend_fn(a._handle, b._handle))
+
+    return method
 
 
-def array_sub(self, other):
-    return _call_op(self, other, "sub")
+def _make_rbinop(op_name):
+    backend_fn = getattr(_backend, op_name)
 
+    def method(self, other):
+        a, b = _to_array(other), self
+        if a is NotImplemented:
+            return NotImplemented
+        return Array.from_handle(backend_fn(a._handle, b._handle))
 
-def array_neg(self):
-    return _call_op(0, self, "sub")
-
-
-def array_mul(self, other):
-    return _call_op(self, other, "mul")
-
-
-def array_div(self, other):
-    return _call_op(self, other, "div")
+    return method
 
 
 def array_matmul(self, other):
     if not isinstance(other, Array):
         return NotImplemented
     return Array(_backend.matmul(self._handle, other._handle))
-
-
-def array_iadd(self, other):
-    return _call_op(self, other, "iadd")
-
-
-def array_isub(self, other):
-    return _call_op(self, other, "isub")
-
-
-def array_imul(self, other):
-    return _call_op(self, other, "imul")
-
-
-def array_idiv(self, other):
-    return _call_op(self, other, "idiv")
 
 
 UNARY_OPS = [
@@ -160,19 +124,21 @@ def sum(self, axis=None, keepdims=False):
     return Array.from_handle(h)
 
 
-Array.__add__ = array_add
-Array.__radd__ = array_add
-Array.__pos__ = lambda x: x
-Array.__sub__ = array_sub
-Array.__rsub__ = array_sub
-Array.__neg__ = array_neg
-Array.__mul__ = array_mul
-Array.__rmul__ = array_mul
-Array.__truediv__ = array_div
-Array.__rtruediv__ = array_div
+Array.__pos__ = lambda self: self
+Array.__neg__ = lambda self: Array.from_handle(
+    _backend.sub(_to_array(0)._handle, self._handle)
+)
+Array.__add__ = _make_binop("add")
+Array.__radd__ = Array.__add__
+Array.__sub__ = _make_binop("sub")
+Array.__rsub__ = _make_rbinop("sub")
+Array.__mul__ = _make_binop("mul")
+Array.__rmul__ = Array.__mul__
+Array.__truediv__ = _make_binop("div")
+Array.__rtruediv__ = _make_rbinop("div")
+Array.__iadd__ = _make_binop("iadd")
+Array.__isub__ = _make_binop("isub")
+Array.__imul__ = _make_binop("imul")
+Array.__itruediv__ = _make_binop("idiv")
 Array.__matmul__ = array_matmul
-Array.__iadd__ = array_iadd
-Array.__isub__ = array_isub
-Array.__imul__ = array_imul
-Array.__itruediv__ = array_idiv
 Array.sum = sum
