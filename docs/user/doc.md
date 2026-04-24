@@ -2,7 +2,7 @@
 Read the README.md first for general information.
 
 ## Installation Process
-Run ``pip install py-forge``.
+Run ``pip install forge-metal``.
 
 ## The Library:
 The main provided type is ``Array`` which is a tensor type wrapping a GPU side buffer. It can be created from an array('f'), memoryview or numpy (``Array.from_buffer(mv, shape)``) from Python and a shape or directly from nested lists/tuples (``Array([...])``).

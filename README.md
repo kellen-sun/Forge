@@ -1,6 +1,6 @@
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/kellen-sun/Forge.svg)
 [![CI Build](https://github.com/kellen-sun/Forge/actions/workflows/main.yml/badge.svg)](https://github.com/kellen-sun/Forge/actions/workflows/main.yml)
-![PyPI](https://shields.io)
+[![PyPI version](https://img.shields.io/pypi/v/forge-metal.svg?color=blue)](https://pypi.org/project/forge-metal/)
 <!---Add another badge here about software license--->
 # Forge
 > Forge crafts Metal: an Array framework with eager execution and JIT graph compilation for Apple Silicon GPUs
