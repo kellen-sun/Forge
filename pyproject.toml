@@ -13,5 +13,4 @@ dependencies = []
 [tool.scikit-build]
 wheel.packages = ["py/Forge"]
 
-# Pass standard arguments to your CMakeLists.txt
 cmake.args = ["-DBUILD_TYPE=Release"]
