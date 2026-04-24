@@ -17,8 +17,10 @@ list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 find_package(nanobind CONFIG REQUIRED)
 
 add_library(forge_lib STATIC
-    cpp/src/array_binops.mm
+    cpp/src/array_elementwise.mm
     cpp/src/array_handle.mm
+    cpp/src/array_matmul.mm
+    cpp/src/array_sum.mm
     cpp/src/compiler.cpp
     cpp/src/compiler.mm
     cpp/src/forge_handle.mm

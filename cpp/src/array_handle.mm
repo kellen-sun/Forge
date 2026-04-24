@@ -10,7 +10,7 @@ ArrayStorage::~ArrayStorage() {
     if (write_event_) id old_event = (__bridge_transfer id)write_event_;
 }
 
-ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
+ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev, bool zero)
     : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
     strides_ = make_strides(shape_);
     size_t nbytes = numel_from_shape(shape_) * sizeof(float);
@@ -18,6 +18,7 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev)
     if (!dev) dev = get_default_forge()->device_ptr();
     id<MTLDevice> device = (__bridge id<MTLDevice>)dev;
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes options:MTLResourceStorageModeShared];
+    if (zero) memset(buf.contents, 0, nbytes);
 
     storage_->metal_buffer_ = (__bridge_retained void*)buf;
 }
@@ -70,7 +71,8 @@ void ArrayHandle::set_event(void* event) {
 void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                             std::vector<int64_t> strides, size_t offset) {
     std::string op_name = "copy_view";
-    id<MTLComputePipelineState> pipeline = get_pipeline(op_name, ELEMENTWISE_METAL_SOURCE);
+    id<MTLComputePipelineState> pipeline =
+        (__bridge_transfer id<MTLComputePipelineState>)get_pipeline(op_name, METAL_SOURCE);
 
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)get_default_forge()->queue_ptr();
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
@@ -156,3 +158,49 @@ std::shared_ptr<ArrayHandle> array_reshape(const std::shared_ptr<ArrayHandle>& h
     ret->copy_from(h, other_shape, make_strides(h->shape()), 0);
     return ret;
 }
+
+std::vector<int64_t> broadcast_shapes(std::span<const int64_t>&& a_shape,
+                                      std::span<const int64_t>&& b_shape) {
+    std::vector<int64_t> out;
+    auto it_a = a_shape.rbegin();
+    auto it_b = b_shape.rbegin();
+    auto end_a = a_shape.rend();
+    auto end_b = b_shape.rend();
+
+    while (it_a != end_a || it_b != end_b) {
+        int64_t dim_a = (it_a != end_a) ? *it_a : 1;
+        int64_t dim_b = (it_b != end_b) ? *it_b : 1;
+
+        if (dim_a == dim_b) {
+            out.push_back(dim_a);
+        } else if (dim_a == 1) {
+            out.push_back(dim_b);
+        } else if (dim_b == 1) {
+            out.push_back(dim_a);
+        } else {
+            throw std::runtime_error("broadcast_shapes: shapes cannot be broadcast");
+        }
+
+        if (it_a != end_a) ++it_a;
+        if (it_b != end_b) ++it_b;
+    }
+    std::reverse(out.begin(), out.end());
+    return out;
+}
+
+std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
+                                       const std::vector<int64_t>& strides,
+                                       const std::vector<int64_t>& final_shape) {
+    std::vector<int64_t> bcast_strides(final_shape.size(), 0);
+    int offset = final_shape.size() - shape.size();
+
+    for (size_t i = 0; i < shape.size(); ++i) {
+        // If the original dim was 1 but the final dim is larger, stride becomes 0
+        if (shape[i] == 1 && final_shape[offset + i] > 1) {
+            bcast_strides[offset + i] = 0;
+        } else {
+            bcast_strides[offset + i] = strides[i];
+        }
+    }
+    return bcast_strides;
+};

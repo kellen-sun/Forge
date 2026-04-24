@@ -1,8 +1,9 @@
+import Forge
 import numpy as np
 import pytest
 from Forge import Array
 
-# --- ADDITION ---
+# region --- ADDITION ---
 
 
 def test_addition_correct():
@@ -12,11 +13,10 @@ def test_addition_correct():
     assert result.list() == [[5.0, 7.0], [9.0, 11.0]]
 
 
-def test_addition_mismatch_shape():
+def test_addition_bcast():
     a1 = Array([[1, 2]])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
-        _ = a1 + a2
+    assert (a1 + a2).list() == [[2, 4], [4, 6]]
 
 
 def test_radd():
@@ -27,13 +27,9 @@ def test_radd():
     assert (a1.__radd__(a2)).list() == [5, 7, 9]
 
 
-def test_add_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a + 5
+# endregion
 
-
-# --- SUBTRACTION ---
+# region --- SUBTRACTION ---
 
 
 def test_subtraction_correct():
@@ -44,10 +40,10 @@ def test_subtraction_correct():
     assert result.list() == [[9.0, 3.0], [-1.0, 4.0]]
 
 
-def test_subtraction_mismatch_shape():
+def test_subtraction_bcast():
     a1 = Array([1, 2, 3])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         _ = a1 - a2
 
 
@@ -58,15 +54,12 @@ def test_subtraction_rsub():
     assert (a1 - a2).list() == [5.0, 5.0]
     # a2 - a1 = [-5.0, -5.0]
     assert (a2 - a1).list() == [-5.0, -5.0]
+    assert (10.0 - a1).list() == [0.0, -10.0]
 
 
-def test_sub_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a - 5
+# endregion
 
-
-# --- MULTIPLICATION ---
+# region --- MULTIPLICATION ---
 
 
 def test_multiplication_correct():
@@ -85,13 +78,18 @@ def test_multiplication_commutative():
     assert (a1 * a2).list() == [3.0, 8.0]
 
 
-def test_mult_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a * 5
+def test_multiplication_bcast():
+    a1 = Array([[2.0, 5.0], [4.0, 1.0]])
+    a2 = Array([[3.0, 2.0]])
+    # Expected: [[6.0, 10.0], [2.0, 10.0]]
+    result = a1 * a2
+    assert result.list() == [[6.0, 10.0], [12.0, 2.0]]
+    assert (a1 * 2).list() == [[4.0, 10.0], [8.0, 2.0]]
 
 
-# --- DIVISION ---
+# endregion
+
+# region --- DIVISION ---
 
 
 def test_division_correct():
@@ -117,20 +115,15 @@ def test_division_by_zero_safe_handling():
     assert np.isnan(result_list[2])
 
 
-def test_div_non_array():
-    a = Array([1, 2, 3])
-    with pytest.raises(TypeError):
-        _ = a / 5
-
-
-def test_div_mismatch_shape():
+def test_division_bcast():
     a1 = Array([[1, 2]])
     a2 = Array([[1, 2], [3, 4]])
-    with pytest.raises(ValueError):
-        _ = a1 / a2
+    assert (a1 / a2).list() == [[1, 1], [0.3333333432674408, 0.5]]
 
 
-# --- MATMUL ---
+# endregion
+
+# region --- MATMUL ---
 
 
 def test_matmul_2d_correct():
@@ -239,3 +232,109 @@ def test_matmul_transpose():
     a2 = Array([[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]])
     result = a1 @ a2
     assert result.list() == [[89.0, 98.0], [116.0, 128.0]]
+
+
+# endregion
+
+# region --- EXPONENTIATION ---
+
+
+def test_exp_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp()
+    assert result.list() == [
+        [2.7182817459106445, 7.3890557289123535],
+        [20.085535049438477, 54.598148345947266],
+    ]
+
+
+def test_fexp():
+    a1 = Array([1, 2, 3])
+    assert (Forge.exp(a1)).list() == [
+        2.7182817459106445,
+        7.3890557289123535,
+        20.085535049438477,
+    ]
+
+
+def test_exp2_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp2()
+    assert result.list() == [
+        [2.0, 4.0],
+        [8.0, 16.0],
+    ]
+
+
+def test_exp10_correct():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    result = a1.exp10()
+    assert result.list() == [
+        [9.999999046325684, 99.99999237060547],
+        [999.9998168945312, 9999.998046875],
+    ]
+
+
+# endregion
+
+# region --- LOGARITHMS ---
+
+# endregion
+
+# region --- RANDOM ---
+
+
+def test_rand_correct():
+    Forge.set_seed(42)
+    result = Forge.rand(2, 2)
+    assert result.list() == [
+        [0.34056931734085083, 0.4297073781490326],
+        [0.4053425192832947, 0.8056803345680237],
+    ]
+    result2 = Forge.rand(2, 2)
+    assert result2.list() != [
+        [0.34056931734085083, 0.4297073781490326],
+        [0.4053425192832947, 0.8056803345680237],
+    ]
+
+
+# endregion
+
+# region --- INPLACE ---
+
+
+def test_iadd():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    a2 = Array([[4.0, 5.0], [6.0, 7.0]])
+    a1 += a2
+    assert a1.list() == [[5.0, 7.0], [9.0, 11.0]]
+
+
+# endregion
+
+# region --- ZERO ---
+
+
+def test_zeros():
+    a = Forge.zeros(2, 3)
+    assert a.list() == [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+
+
+# endregion
+
+# region --- SUM ---
+
+
+def test_sum_axis():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    assert a1.sum(axis=1).list() == [3.0, 7.0]
+    assert a1.sum(axis=-2, keepdims=True).list() == [[4.0, 6.0]]
+
+
+def test_sum_global():
+    a1 = Array([[1.0, 2.0], [3.0, 4.0]])
+    assert a1.sum().list() == 10.0
+    assert a1.sum(keepdims=True).list() == [[10.0]]
+
+
+# endregion

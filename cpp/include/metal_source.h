@@ -2,7 +2,7 @@
 
 #include <string>
 
-const char* const ELEMENTWISE_METAL_SOURCE = R"(
+const char* const METAL_SOURCE = R"(
 #include <metal_stdlib>
 using namespace metal;
 
@@ -23,14 +23,114 @@ uint get_strided_index(uint gid,
     return physical_idx;
 }
 
-#define BINARY_OP(NAME, OP) \
-kernel void NAME( \
+inline uint hash(uint seed) {
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+inline float rand_uniform(uint gid, uint base_seed) {
+    uint random_int = hash(base_seed + gid);
+
+    return float(random_int) / 4294967295.0;
+}
+
+inline float rand_normal(uint gid, uint base_seed) {
+    float u1 = max(rand_uniform(gid * 2, base_seed), 1e-7f);
+    float u2 = rand_uniform(gid * 2 + 1, base_seed);
+
+    float r = sqrt(-2.0 * log(u1));
+    float theta = 2.0 * 3.14159265359 * u2;
+
+    return r * cos(theta);
+}
+
+#define NULLARY_OP(NAME0, OP0) \
+kernel void NAME0( \
+    device float* Out           [[ buffer(0) ]], \
+    constant uint& seed         [[ buffer(1) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    Out[gid] = OP0(gid, seed); \
+}
+NULLARY_OP(rand, rand_uniform)
+NULLARY_OP(randn, rand_normal)
+
+#define INPLACE_OP(NAME10, OP10) \
+kernel void NAME10( \
+    device float* A       [[ buffer(0) ]], \
+    const device float* B       [[ buffer(1) ]], \
+    constant long* shape        [[ buffer(2) ]], \
+    constant long* strides_A    [[ buffer(3) ]], \
+    constant long& offset_A     [[ buffer(4) ]], \
+    constant long* strides_B    [[ buffer(5) ]], \
+    constant long& offset_B     [[ buffer(6) ]], \
+    constant uint& ndim         [[ buffer(7) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    /* Calculate Read Locations */ \
+    uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
+    uint idx_b = get_strided_index(gid, shape, strides_B, offset_B, ndim); \
+    \
+    A[idx_a] = A[idx_a] OP10 B[idx_b]; \
+}
+INPLACE_OP(iadd, +)
+INPLACE_OP(isub, -)
+INPLACE_OP(imul, *)
+INPLACE_OP(idiv, /)
+
+#define UNARY_OP(NAME1, OP1) \
+kernel void NAME1( \
+    const device float* A       [[ buffer(0) ]], \
+    device float* Out           [[ buffer(1) ]], \
+    constant long* shape        [[ buffer(2) ]], \
+    constant long* strides_A    [[ buffer(3) ]], \
+    constant long& offset_A     [[ buffer(4) ]], \
+    constant uint& ndim         [[ buffer(5) ]], \
+    \
+    uint gid                    [[ thread_position_in_grid ]]) \
+{ \
+    /* Calculate Read Locations */ \
+    uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
+    \
+    Out[gid] = OP1(A[idx_a]); \
+}
+UNARY_OP(exp, exp)
+UNARY_OP(exp2, exp2)
+UNARY_OP(exp10, exp10)
+UNARY_OP(log, log)
+UNARY_OP(log2, log2)
+UNARY_OP(log10, log10)
+UNARY_OP(sqrt, sqrt)
+UNARY_OP(rsqrt, rsqrt)
+UNARY_OP(abs, abs)
+UNARY_OP(sign, sign)
+UNARY_OP(ceil, ceil)
+UNARY_OP(floor, floor)
+UNARY_OP(round, round)
+UNARY_OP(trunc, trunc)
+UNARY_OP(fract, fract)
+UNARY_OP(sin, sin)
+UNARY_OP(cos, cos)
+UNARY_OP(tan, tan)
+UNARY_OP(asin, asin)
+UNARY_OP(acos, acos)
+UNARY_OP(atan, atan)
+UNARY_OP(sinh, sinh)
+UNARY_OP(cosh, cosh)
+UNARY_OP(tanh, tanh)
+
+
+#define BINARY_OP(NAME2, OP2) \
+kernel void NAME2( \
     const device float* A       [[ buffer(0) ]], \
     const device float* B       [[ buffer(1) ]], \
     device float* Out           [[ buffer(2) ]], \
-    \
-    /* TODO: Why are these in buffers, its just a few integers */ \
-    /* can't we pass it using .setBytes */ \
     constant long* shape        [[ buffer(3) ]], \
     constant long* strides_A    [[ buffer(4) ]], \
     constant long& offset_A     [[ buffer(5) ]], \
@@ -44,7 +144,7 @@ kernel void NAME( \
     uint idx_a = get_strided_index(gid, shape, strides_A, offset_A, ndim); \
     uint idx_b = get_strided_index(gid, shape, strides_B, offset_B, ndim); \
     \
-    Out[gid] = A[idx_a] OP B[idx_b]; \
+    Out[gid] = A[idx_a] OP2 B[idx_b]; \
 }
 BINARY_OP(add, +)
 BINARY_OP(sub, -)
@@ -67,4 +167,65 @@ kernel void copy_view(
     uint idx_src = get_strided_index(gid, shape, strides_src, offset_src, ndim);
 
     Dest[idx_dst] = Src[idx_src];
-})";
+}
+
+kernel void reduce_sum_global(
+    const device float* Input   [[ buffer(0) ]],
+    device float* Output        [[ buffer(1) ]],
+    constant long* in_shape     [[ buffer(2) ]],
+    constant long* in_strides   [[ buffer(3) ]],
+    constant long& in_offset    [[ buffer(4) ]],
+    constant uint& in_ndim      [[ buffer(5) ]],
+    constant uint& in_numel     [[ buffer(6) ]],
+
+    uint gid                    [[ thread_position_in_grid ]])
+{
+    if (gid > 0) return;
+    float total = 0.0;
+    for (uint i = 0; i < in_numel; ++i) {
+        uint physical_idx = in_offset;
+        uint remaining = i;
+        for (int d = in_ndim - 1; d >= 0; --d) {
+            uint coord = remaining % in_shape[d];
+            physical_idx += coord * in_strides[d];
+            remaining /= in_shape[d];
+        }
+        total += Input[physical_idx];
+    }
+    Output[0] = total;
+}
+
+kernel void reduce_sum_axis(
+    const device float* Input   [[ buffer(0) ]],
+    device float* Output        [[ buffer(1) ]],
+
+    constant long* out_shape    [[ buffer(2) ]],
+    constant uint& out_ndim     [[ buffer(3) ]],
+
+    constant long* in_shape     [[ buffer(4) ]],
+    constant long* in_strides   [[ buffer(5) ]],
+    constant long& in_offset    [[ buffer(6) ]],
+
+    constant uint& reduce_axis  [[ buffer(7) ]],
+    constant uint& out_numel    [[ buffer(8) ]],
+
+    uint gid                    [[ thread_position_in_grid ]])
+{
+    if (gid >= out_numel) return;
+    uint remaining = gid;
+    uint input_base_idx = in_offset;
+    for (int i = out_ndim - 1; i >= 0; --i) {
+        uint coord = remaining % out_shape[i];
+        uint in_dim = (i >= reduce_axis) ? i + 1 : i;
+        input_base_idx += coord * in_strides[in_dim];
+        remaining /= out_shape[i];
+    }
+    float total = 0.0;
+    uint axis_size = in_shape[reduce_axis];
+    uint axis_stride = in_strides[reduce_axis];
+    for (uint j = 0; j < axis_size; ++j) {
+        total += Input[input_base_idx + (j * axis_stride)];
+    }
+    Output[gid] = total;
+}
+)";

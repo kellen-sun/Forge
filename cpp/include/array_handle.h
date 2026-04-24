@@ -21,7 +21,7 @@ class ArrayHandle {
 
    public:
     // CONSTRUCTORS //
-    ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr);
+    ArrayHandle(std::vector<int64_t> shape, void* dev = nullptr, bool zero = false);
     ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev = nullptr);
     ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
                 std::vector<int64_t> new_strides, size_t new_offset);
@@ -70,3 +70,10 @@ std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h);
 
 std::shared_ptr<ArrayHandle> array_reshape(const std::shared_ptr<ArrayHandle>& h,
                                            std::vector<int64_t> shape);
+
+std::vector<int64_t> broadcast_shapes(std::span<const int64_t>&& a_shape,
+                                      std::span<const int64_t>&& b_shape);
+
+std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
+                                       const std::vector<int64_t>& strides,
+                                       const std::vector<int64_t>& final_shape);

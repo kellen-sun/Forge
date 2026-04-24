@@ -13,7 +13,7 @@ def tensor_3d():
     return Array(data)
 
 
-# --- __getitem__ ---
+# region --- __getitem__ ---
 
 
 def test_basic_integer_indexing(tensor_3d):
@@ -136,7 +136,9 @@ def test_empty_array():
         _ = a[0]
 
 
-# --- None & Ellipsis ---
+# endregion
+
+# region --- None & Ellipsis ---
 
 
 def test_ellipsis_indexing(tensor_3d):
@@ -179,7 +181,9 @@ def test_newaxis_and_ellipsis_combo(tensor_3d):
     assert original_flat == view_flat
 
 
-# --- __setitem__ ---
+# endregion
+
+# region --- __setitem__ ---
 
 
 def test_set_indexing(tensor_3d):
@@ -207,7 +211,9 @@ def test_set_broadcasting(tensor_3d):
     assert tensor_3d[1, 0].list() == [7, 7, 7, 7]
 
 
-# --- sum & len ---
+# endregion
+
+# region --- sum & len ---
 
 
 def test_sum(tensor_3d):
@@ -230,3 +236,6 @@ def test_len(tensor_3d):
     assert len(tensor_3d) == 2
     assert len(tensor_3d[0]) == 3
     assert len(tensor_3d[0, 0]) == 4
+
+
+# endregion
