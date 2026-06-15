@@ -19,8 +19,8 @@ std::shared_ptr<ArrayHandle> sum_global(const std::shared_ptr<ArrayHandle>& A, b
 
     auto out = std::make_shared<ArrayHandle>(out_shape, defaultForgeHandle->device_ptr());
 
-    id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
-    id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>)out->metal_buffer();
+    id<MTLBuffer> bufA = A->metal_buffer();
+    id<MTLBuffer> bufOut = out->metal_buffer();
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd) throw std::runtime_error("Metal Error: Failed to create command buffer.");
@@ -57,7 +57,7 @@ std::shared_ptr<ArrayHandle> sum_global(const std::shared_ptr<ArrayHandle>& A, b
     [enc endEncoding];
 
     [cmd commit];
-    out->set_event((__bridge void*)cmd);
+    out->set_event(cmd);
 
     return out;
 }
@@ -83,8 +83,8 @@ std::shared_ptr<ArrayHandle> sum_axis(const std::shared_ptr<ArrayHandle>& A, siz
 
     if (out_numel == 0) return out;
 
-    id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)A->metal_buffer();
-    id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>)out->metal_buffer();
+    id<MTLBuffer> bufA = A->metal_buffer();
+    id<MTLBuffer> bufOut = out->metal_buffer();
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd) throw std::runtime_error("Metal Error: Failed to create command buffer.");
@@ -127,7 +127,7 @@ std::shared_ptr<ArrayHandle> sum_axis(const std::shared_ptr<ArrayHandle>& A, siz
     [enc endEncoding];
 
     [cmd commit];
-    out->set_event((__bridge void*)cmd);
+    out->set_event(cmd);
 
     return out;
 }

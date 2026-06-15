@@ -42,9 +42,9 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     // Helper to find which buffers a node's I/O refers to: (inputHandle, Arena or outputHandle)
     auto get_metal_buffer_for_node = [&](int node_idx) -> id<MTLBuffer> {
         int root = this->arena->get_root(node_idx);
-        if (root == output_root) return (__bridge id<MTLBuffer>)output_handle->metal_buffer();
+        if (root == output_root) return output_handle->metal_buffer();
         if (this->nodes[root].op == OpCode::INPUT) {
-            return (__bridge id<MTLBuffer>)inputs[root]->metal_buffer();
+            return inputs[root]->metal_buffer();
         }
         return arena_buffer;
     };
@@ -86,6 +86,6 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     }
     [computeEncoder endEncoding];
     [commandBuffer commit];
-    output_handle->set_event((__bridge void*)commandBuffer);
+    output_handle->set_event(commandBuffer);
     return output_handle;
 }

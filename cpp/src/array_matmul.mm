@@ -111,9 +111,9 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
                                                                                 alpha:1.0
                                                                                  beta:0.0];
 
-    id<MTLBuffer> bufA = (__bridge id<MTLBuffer>)a->metal_buffer();
-    id<MTLBuffer> bufB = (__bridge id<MTLBuffer>)b->metal_buffer();
-    id<MTLBuffer> bufC = (__bridge id<MTLBuffer>)c->metal_buffer();
+    id<MTLBuffer> bufA = a->metal_buffer();
+    id<MTLBuffer> bufB = b->metal_buffer();
+    id<MTLBuffer> bufC = c->metal_buffer();
 
     // total_ops only counts batch dimensions (not M, N)
     size_t total_ops = 1;
@@ -150,7 +150,7 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     }
 
     [cmd commit];
-    c->set_event((__bridge void*)cmd);
+    c->set_event(cmd);
 
     std::vector<int64_t> final_shape = c->shape();
     if (squeeze_a && squeeze_b) {
