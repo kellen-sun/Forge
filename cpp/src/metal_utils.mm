@@ -63,12 +63,12 @@ std::shared_ptr<ArrayHandle> launch_elementwise(
 
     NSUInteger slot = 0;
     for (const auto& inp : inputs) {
-        [enc setBuffer:(__bridge id<MTLBuffer>)inp->metal_buffer() offset:0 atIndex:slot++];
+        [enc setBuffer:inp->metal_buffer() offset:0 atIndex:slot++];
     }
     auto out = dedicated_out ? std::make_shared<ArrayHandle>(out_shape, fh->device_ptr())
                              : *std::begin(inputs);
     if (dedicated_out) {
-        id<MTLBuffer> out_metalbuf = (__bridge id<MTLBuffer>)out->metal_buffer();
+        id<MTLBuffer> out_metalbuf = out->metal_buffer();
         [enc setBuffer:out_metalbuf offset:0 atIndex:slot++];
     }
 
@@ -108,6 +108,6 @@ std::shared_ptr<ArrayHandle> launch_elementwise(
     [enc endEncoding];
 
     [cmd commit];
-    out->set_event((__bridge void*)cmd);
+    out->set_event(cmd);
     return out;
 }
