@@ -1,9 +1,12 @@
 import functools
+import weakref
 
 from . import _backend, graph
 from .array import Array
 from .graph import Graph, Node, Ops
 from .symbolic import SymbolicArray
+
+GRAPH_CACHE = weakref.WeakKeyDictionary()
 
 
 def _flatten(g, output):
@@ -33,11 +36,10 @@ def forge(fn=None, *, debug=False):
     if fn is None:
         return functools.partial(forge, debug=debug)
 
-    graph_cache = {}
-
     @functools.wraps(fn)
     def wrapper(*args):
         input_metas = tuple((x.shape, x.offset, tuple(x.strides)) for x in args)
+        graph_cache = GRAPH_CACHE.setdefault(fn, {})
         if input_metas in graph_cache:
             backend_graph = graph_cache[input_metas]
         else:
