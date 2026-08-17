@@ -5,10 +5,10 @@
 #include "../include/metal_source.h"
 #include "../include/metal_utils.h"
 
-ArrayStorage::~ArrayStorage() {
-    if (metal_buffer_) id old_buffer = (__bridge_transfer id)metal_buffer_;
-    if (write_event_) id old_event = (__bridge_transfer id)write_event_;
-}
+struct ArrayStorage {
+    id<MTLBuffer> metal_buffer = nil;
+    id<MTLCommandBuffer> write_event = nil;
+};
 
 ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev, bool zero)
     : shape_{std::move(shape)}, offset_(0), storage_(std::make_shared<ArrayStorage>()) {
@@ -20,7 +20,7 @@ ArrayHandle::ArrayHandle(std::vector<int64_t> shape, void* dev, bool zero)
     id<MTLBuffer> buf = [device newBufferWithLength:nbytes options:MTLResourceStorageModeShared];
     if (zero) memset(buf.contents, 0, nbytes);
 
-    storage_->metal_buffer_ = (__bridge_retained void*)buf;
+    storage_->metal_buffer = buf;
 }
 
 ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void* dev)
@@ -34,7 +34,7 @@ ArrayHandle::ArrayHandle(const float* src_data, std::vector<int64_t> shape, void
                                             length:nbytes
                                            options:MTLResourceStorageModeShared];
 
-    storage_->metal_buffer_ = (__bridge_retained void*)buf;
+    storage_->metal_buffer = buf;
 }
 
 ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector<int64_t> new_shape,
@@ -47,25 +47,22 @@ ArrayHandle::ArrayHandle(const std::shared_ptr<ArrayHandle>& parent, std::vector
 std::span<float> ArrayHandle::data() {
     size_t total = numel_from_shape(shape_);
     if (total == 0) return {};
-    if (!storage_->metal_buffer_) {
+    if (!storage_->metal_buffer) {
         throw std::runtime_error(
             "ArrayHandle::data: no existing metal_buffer associated with ArrayHandle");
     }
-    id<MTLBuffer> buf = (__bridge id<MTLBuffer>)storage_->metal_buffer_;
-    float* src = (float*)[buf contents];
+    float* src = (float*)[storage_->metal_buffer contents];
 
     return std::span<float>(src, total);
 }
 
 std::span<const float> ArrayHandle::data() const { return const_cast<ArrayHandle*>(this)->data(); }
 
-void ArrayHandle::set_event(void* event) {
-    if (storage_->write_event_ == event) return;
-    if (storage_->write_event_) id old_event = (__bridge_transfer id)storage_->write_event_;
-    if (event)
-        storage_->write_event_ = (__bridge_retained void*)(__bridge id)event;
-    else
-        storage_->write_event_ = nullptr;
+id<MTLBuffer> ArrayHandle::metal_buffer() const { return storage_->metal_buffer; }
+
+void ArrayHandle::set_event(id<MTLCommandBuffer> event) {
+    if (storage_->write_event == event) return;
+    storage_->write_event = event;
 }
 
 void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
@@ -85,8 +82,8 @@ void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int6
         src_strides.assign(shape.size(), 0);
     }
 
-    [enc setBuffer:(__bridge id<MTLBuffer>)this->metal_buffer() offset:0 atIndex:0];
-    [enc setBuffer:(__bridge id<MTLBuffer>)other->metal_buffer() offset:0 atIndex:1];
+    [enc setBuffer:this->metal_buffer() offset:0 atIndex:0];
+    [enc setBuffer:other->metal_buffer() offset:0 atIndex:1];
 
     uint ndim = (uint)shape.size();
 
@@ -125,15 +122,13 @@ void ArrayHandle::copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int6
     [enc dispatchThreads:gridSize threadsPerThreadgroup:threadgroupSize];
     [enc endEncoding];
     [cmd commit];
-    this->set_event((__bridge void*)cmd);
+    this->set_event(cmd);
 }
 
 void ArrayHandle::synchronize() {
-    if (!storage_->write_event_) return;
-    id<MTLCommandBuffer> cmd = (__bridge id<MTLCommandBuffer>)storage_->write_event_;
-    [cmd waitUntilCompleted];
-    id cmd_to_release = (__bridge_transfer id)storage_->write_event_;
-    storage_->write_event_ = nullptr;
+    if (!storage_->write_event) return;
+    [storage_->write_event waitUntilCompleted];
+    storage_->write_event = nil;
 }
 
 std::vector<int64_t> array_shape(const std::shared_ptr<ArrayHandle>& h) { return h->shape(); }

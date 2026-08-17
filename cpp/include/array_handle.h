@@ -1,16 +1,18 @@
 #pragma once
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <span>
 #include <vector>
 
 #include "forge_handle.h"
 
-struct ArrayStorage {
-    void* metal_buffer_ = nullptr;
-    void* write_event_ = nullptr;
+#ifdef __OBJC__
+@protocol MTLBuffer;
+@protocol MTLCommandBuffer;
+#endif
 
-    ~ArrayStorage();
-};
+struct ArrayStorage;
 
 class ArrayHandle {
    private:
@@ -32,11 +34,12 @@ class ArrayHandle {
     size_t offset() const { return offset_; }
     std::span<const float> data() const;
     std::span<float> data();
-    void* metal_buffer() const { return storage_->metal_buffer_; }
 
-    // SETTER //
-    void set_metal_buffer(void* buf) { storage_->metal_buffer_ = buf; }
-    void set_event(void* event);
+#ifdef __OBJC__
+    id<MTLBuffer> metal_buffer() const;
+    void set_event(id<MTLCommandBuffer> event);
+#endif
+
     void copy_from(std::shared_ptr<ArrayHandle> other, std::vector<int64_t> shape,
                    std::vector<int64_t> strides, size_t offset);
 

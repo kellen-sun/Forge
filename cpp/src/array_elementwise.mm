@@ -46,7 +46,7 @@ std::shared_ptr<ArrayHandle> array_nullaryops(const std::vector<int64_t>& shape,
 
     id<MTLComputePipelineState> pipeline =
         (__bridge_transfer id<MTLComputePipelineState>)get_pipeline(op_name, METAL_SOURCE);
-    id<MTLBuffer> bufOut = (__bridge id<MTLBuffer>)out->metal_buffer();
+    id<MTLBuffer> bufOut = out->metal_buffer();
 
     id<MTLCommandBuffer> cmd = [queue commandBuffer];
     if (!cmd)
@@ -67,6 +67,6 @@ std::shared_ptr<ArrayHandle> array_nullaryops(const std::vector<int64_t>& shape,
 
     [cmd commit];
     fh->set_seed(seed + (uint32_t)numel);
-    out->set_event((__bridge void*)cmd);
+    out->set_event(cmd);
     return out;
 }
