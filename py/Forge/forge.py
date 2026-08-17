@@ -5,8 +5,6 @@ from .array import Array
 from .graph import Graph, Node, Ops
 from .symbolic import SymbolicArray
 
-GRAPH_CACHE = {}
-
 
 def _flatten(g, output):
     node_to_id = {node: i for i, node in enumerate(g.nodes)}
@@ -35,12 +33,13 @@ def forge(fn=None, *, debug=False):
     if fn is None:
         return functools.partial(forge, debug=debug)
 
+    graph_cache = {}
+
     @functools.wraps(fn)
     def wrapper(*args):
         input_metas = tuple((x.shape, x.offset, tuple(x.strides)) for x in args)
-        cache_key = (id(fn), input_metas)
-        if cache_key in GRAPH_CACHE:
-            backend_graph = GRAPH_CACHE[cache_key]
+        if input_metas in graph_cache:
+            backend_graph = graph_cache[input_metas]
         else:
             if debug:
                 print(f"Compiling func {fn.__name__}")
@@ -63,7 +62,7 @@ def forge(fn=None, *, debug=False):
             if debug:
                 _print_helper(flat_nodes, output_index)
             backend_graph = _backend.make_graph(flat_nodes, output_index)
-            GRAPH_CACHE[cache_key] = backend_graph
+            graph_cache[input_metas] = backend_graph
 
         inputs = [x._handle for x in args]
         return Array(backend_graph.execute(inputs))
