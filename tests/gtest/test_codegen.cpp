@@ -18,6 +18,12 @@ TEST_P(CodegenGoldenTest, MatchesGolden) {
     std::string out_path = dir + test_name + ".out";
 
     Graph g = parse_graph(in_path);
+    IR ir;
+    ir.nodes = std::move(g.nodes);
+    ir.output_index = g.output_index;
+    optimize_graph(ir);
+    g.nodes = std::move(ir.nodes);
+    g.output_index = ir.output_index;
     generateKernels(g);
     std::string actual = dump_codegen(g);
 
@@ -34,4 +40,5 @@ TEST_P(CodegenGoldenTest, MatchesGolden) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
-                         ::testing::Values("identity", "add_2x2", "add_const", "view_add"));
+                         ::testing::Values("identity", "add_2x2", "add_const", "view_add",
+                                           "dce_dead_add"));
