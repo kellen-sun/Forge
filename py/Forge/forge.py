@@ -1,4 +1,5 @@
 import functools
+import struct
 import weakref
 
 from . import _backend, graph
@@ -14,8 +15,11 @@ def _flatten(g, output):
     flat_nodes = []
     for node in g.nodes:
         input_ids = [node_to_id[parent] for parent in node.inputs]
+        args = node.args
+        if node.op == Ops.CONSTANT:
+            args = (struct.unpack("<I", struct.pack("<f", float(node.args[0])))[0],)
         flat_nodes.append(
-            (node.op, input_ids, node.shape, node.offset, node.strides, node.args)
+            (node.op, input_ids, node.shape, node.offset, node.strides, args)
         )
     return flat_nodes, node_to_id[output.node]
 
