@@ -41,4 +41,4 @@ TEST_P(CodegenGoldenTest, MatchesGolden) {
 
 INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
                          ::testing::Values("identity", "add_2x2", "add_const", "view_add",
-                                           "dce_dead_add"));
+                                           "dce_dead_add", "canonicalize_identity_reshape"));
