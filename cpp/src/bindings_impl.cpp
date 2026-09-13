@@ -65,6 +65,9 @@ std::vector<Node> parse_nodes(nb::list flat_nodes) {
         // consider using a switch statement
         if (n.op == OpCode::UPDATE) {
             // py_args = (shape, strides, offset)
+            if (py_args.size() < 3) {
+                throw std::runtime_error("UPDATE node missing shape/strides/offset in args");
+            }
             auto s = nb::cast<std::vector<int64_t>>(py_args[0]);
             auto st = nb::cast<std::vector<int64_t>>(py_args[1]);
             int64_t off = nb::cast<int64_t>(py_args[2]);
@@ -72,6 +75,12 @@ std::vector<Node> parse_nodes(nb::list flat_nodes) {
             n.args.insert(n.args.end(), s.begin(), s.end());
             n.args.insert(n.args.end(), st.begin(), st.end());
             n.args.push_back(off);
+        } else if (n.op == OpCode::CONSTANT) {
+            // py_args = (float32 bits as int64,)
+            if (py_args.size() < 1) {
+                throw std::runtime_error("CONSTANT node missing scalar value in args");
+            }
+            n.args.push_back(nb::cast<int64_t>(py_args[0]));
         }
         nodes.push_back(n);
     }
