@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "graph.h"
+#include "ir.h"
 
 // Python _flatten packs CONSTANT as bytes
 inline int64_t encode_f32(float v) {
@@ -18,7 +19,7 @@ inline float decode_f32(int64_t arg) {
     return v;
 }
 
-std::vector<Node> optimize_graph(std::vector<Node> raw_nodes);
+void optimize_graph(IR& ir);
 
 void generateKernels(Graph& graph);
 
