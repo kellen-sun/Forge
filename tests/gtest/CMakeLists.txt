@@ -14,6 +14,7 @@ add_executable(forge_tests
     test_constant_args.cpp
     test_codegen.cpp
     test_verify.cpp
+    test_dce.cpp
 )
 
 set_target_properties(forge_tests PROPERTIES

@@ -23,3 +23,9 @@ class PassManager {
    private:
     std::vector<std::unique_ptr<Pass>> passes;
 };
+
+class DCEPass : public Pass {
+   public:
+    const char* name() const override { return "dce"; }
+    void run(IR& ir) override;
+};

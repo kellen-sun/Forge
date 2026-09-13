@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -9,6 +10,7 @@
 
 void optimize_graph(IR& ir) {
     PassManager pm;
+    pm.addPass(std::make_unique<DCEPass>());
     pm.run(ir);
 }
 // Could generate Fused Kernels, with special OpCodes
