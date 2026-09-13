@@ -69,6 +69,29 @@ Run:
 ```
 Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
 
+##### Codegen goldens
+``generateKernels`` is checked by file tests under ``tests/gtest/codegen_tests/`` (same graph ``.in`` format as the memory-arena tests). The ``.out`` files store dispatch configs plus compact MSL (one kernel per line). Tests compare that compact text byte-for-byte.
+
+Rewrite goldens after an intentional emitter change (from the repo root, with gtests built):
+```
+UPDATE_GOLDENS=1 ./build/tests/forge_tests --gtest_filter='*CodegenGoldenTest*'
+```
+
+##### Viewing compact goldens
+``tests/gtest/codegen_tests/view_golden.py`` pretty-prints a ``.out`` for humans. It does not change files or affect CI.
+
+From the repo root:
+```
+# every *.out in codegen_tests/
+python3 tests/gtest/codegen_tests/view_golden.py
+
+# one or more specific goldens
+python3 tests/gtest/codegen_tests/view_golden.py tests/gtest/codegen_tests/add_2x2.out
+python3 tests/gtest/codegen_tests/view_golden.py tests/gtest/codegen_tests/add_const.out tests/gtest/codegen_tests/view_add.out
+```
+
+Configs (kernel name, grid, group) print as-is; the shader after ``---`` is indented so Metal ``[[buffer(...)]]`` attributes stay on the same line as the declaration.
+
 ### To run benchmarks
 ```
 pip install numpy torch mlx
