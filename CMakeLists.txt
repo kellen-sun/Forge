@@ -26,6 +26,7 @@ add_library(forge_lib STATIC
     cpp/src/forge_handle.mm
     cpp/src/memory_arena.cpp
     cpp/src/pass_manager.cpp
+    cpp/src/verify.cpp
     cpp/src/metal_utils.mm
     cpp/src/runtime.mm
 )
