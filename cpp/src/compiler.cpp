@@ -69,18 +69,14 @@ static const char* bin_name(OpCode op) {
 static void emit_strided_index(std::ostringstream& src, const std::string& idx_name,
                                const std::vector<int64_t>& out_shape,
                                const std::vector<int64_t>& strides) {
-    src << "    long " << idx_name << " = 0;\n";
+    src << "long " << idx_name << "=0;";
     if (out_shape.empty()) return;
-    src << "    {\n";
-    src << "        uint remaining = gid;\n";
+    src << "{uint remaining=gid;";
     for (int i = (int)out_shape.size() - 1; i >= 0; --i) {
-        src << "        {\n";
-        src << "            uint c = remaining % " << (uint64_t)out_shape[i] << "u;\n";
-        src << "            " << idx_name << " += long(c) * " << strides[i] << "L;\n";
-        src << "            remaining /= " << (uint64_t)out_shape[i] << "u;\n";
-        src << "        }\n";
+        src << "{uint c=remaining%" << (uint64_t)out_shape[i] << "u;" << idx_name
+            << "+=long(c)*" << strides[i] << "L;remaining/=" << (uint64_t)out_shape[i] << "u;}";
     }
-    src << "    }\n";
+    src << "}";
 }
 
 static std::string f32_literal(float v) {
@@ -120,12 +116,9 @@ void generateKernels(Graph& graph) {
                     break;
                 }
                 std::string name = "op_" + std::to_string(i) + "_const";
-                body << "kernel void " << name << "(\n";
-                body << "    device float* Out [[buffer(0)]],\n";
-                body << "    uint gid [[thread_position_in_grid]])\n";
-                body << "{\n";
-                body << "    Out[gid] = " << f32_literal(decode_f32(node.args[0])) << ";\n";
-                body << "}\n\n";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],uint gid [[thread_position_in_grid]]){"
+                     << "Out[gid]=" << f32_literal(decode_f32(node.args[0])) << ";}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;
@@ -147,16 +140,12 @@ void generateKernels(Graph& graph) {
                 auto strides_a = get_bcast_strides(a.shape, a.strides, node.shape);
                 auto strides_b = get_bcast_strides(b.shape, b.strides, node.shape);
                 std::string name = "op_" + std::to_string(i) + "_" + bin_name(node.op);
-                body << "kernel void " << name << "(\n";
-                body << "    device float* Out [[buffer(0)]],\n";
-                body << "    const device float* A [[buffer(1)]],\n";
-                body << "    const device float* B [[buffer(2)]],\n";
-                body << "    uint gid [[thread_position_in_grid]])\n";
-                body << "{\n";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){";
                 emit_strided_index(body, "idx_a", node.shape, strides_a);
                 emit_strided_index(body, "idx_b", node.shape, strides_b);
-                body << "    Out[gid] = A[idx_a] " << bin_symbol(node.op) << " B[idx_b];\n";
-                body << "}\n\n";
+                body << "Out[gid]=A[idx_a]" << bin_symbol(node.op) << "B[idx_b];}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;
@@ -173,14 +162,11 @@ void generateKernels(Graph& graph) {
                 const Node& src = graph.nodes[node.inputs[0]];
                 auto strides_s = get_bcast_strides(src.shape, src.strides, node.shape);
                 std::string name = "op_" + std::to_string(i) + "_copy";
-                body << "kernel void " << name << "(\n";
-                body << "    device float* Out [[buffer(0)]],\n";
-                body << "    const device float* A [[buffer(1)]],\n";
-                body << "    uint gid [[thread_position_in_grid]])\n";
-                body << "{\n";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "uint gid [[thread_position_in_grid]]){";
                 emit_strided_index(body, "idx_a", node.shape, strides_s);
-                body << "    Out[gid] = A[idx_a];\n";
-                body << "}\n\n";
+                body << "Out[gid]=A[idx_a];}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;
@@ -193,7 +179,7 @@ void generateKernels(Graph& graph) {
     }
 
     if (any_kernel) {
-        graph.shader_source = "#include <metal_stdlib>\nusing namespace metal;\n\n" + body.str();
+        graph.shader_source = "#include <metal_stdlib>\nusing namespace metal;\n" + body.str();
     }
 }
 // Generates one huge string of all the kernel functions back to back
