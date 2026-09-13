@@ -5,6 +5,8 @@
 
 #include "ir.h"
 
+void verify(const IR& ir);
+
 // a pass mutates the IR in place.
 class Pass {
    public:
