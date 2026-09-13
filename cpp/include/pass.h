@@ -24,6 +24,12 @@ class PassManager {
     std::vector<std::unique_ptr<Pass>> passes;
 };
 
+class CanonicalizePass : public Pass {
+   public:
+    const char* name() const override { return "canonicalize"; }
+    void run(IR& ir) override;
+};
+
 class DCEPass : public Pass {
    public:
     const char* name() const override { return "dce"; }

@@ -15,6 +15,7 @@ add_executable(forge_tests
     test_codegen.cpp
     test_verify.cpp
     test_dce.cpp
+    test_canonicalize.cpp
 )
 
 set_target_properties(forge_tests PROPERTIES
