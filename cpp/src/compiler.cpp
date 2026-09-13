@@ -188,6 +188,7 @@ void generateKernels(Graph& graph) {
 // for each node in the graph, we save the associated kernel's name, in the config.name
 // if it's a no-op, keep a "ghost" empty config
 // so that at the end: configs.size == nodes.size (== pipelines.size)
-// Op metadata: Shape, strides (internal offset?) WONT be handled from execute()
-// This means the kernel strings we generate needs to bake in/hardcode the loops for that
+// Shape and strides are baked into the kernel as literals.
+// Offset is applied at bind time in execute() (buffer byte offset), so generated
+// kernels index from 0.
 // kernels generated so that out buffer is idx 0, then the N inputs to the node (in order)
