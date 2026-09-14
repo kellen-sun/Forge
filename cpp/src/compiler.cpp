@@ -74,15 +74,15 @@ static const char* bin_name(OpCode op) {
     }
 }
 
-static void emit_strided_index(std::ostringstream& src, const std::string& idx_name,
-                               const std::vector<int64_t>& out_shape,
-                               const std::vector<int64_t>& strides) {
+static void emit_linear_index(std::ostringstream& src, const std::string& idx_name,
+                              const std::string& linear, const std::vector<int64_t>& shape,
+                              const std::vector<int64_t>& strides) {
     src << "long " << idx_name << "=0;";
-    if (out_shape.empty()) return;
-    src << "{uint remaining=gid;";
-    for (int i = (int)out_shape.size() - 1; i >= 0; --i) {
-        src << "{uint c=remaining%" << (uint64_t)out_shape[i] << "u;" << idx_name
-            << "+=long(c)*" << strides[i] << "L;remaining/=" << (uint64_t)out_shape[i] << "u;}";
+    if (shape.empty()) return;
+    src << "{uint remaining=" << linear << ";";
+    for (int i = (int)shape.size() - 1; i >= 0; --i) {
+        src << "{uint c=remaining%" << (uint64_t)shape[i] << "u;" << idx_name << "+=long(c)*"
+            << strides[i] << "L;remaining/=" << (uint64_t)shape[i] << "u;}";
     }
     src << "}";
 }
@@ -151,8 +151,8 @@ void generateKernels(Graph& graph) {
                 body << "kernel void " << name
                      << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
                      << "const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){";
-                emit_strided_index(body, "idx_a", node.shape, strides_a);
-                emit_strided_index(body, "idx_b", node.shape, strides_b);
+                emit_linear_index(body, "idx_a", "gid", node.shape, strides_a);
+                emit_linear_index(body, "idx_b", "gid", node.shape, strides_b);
                 body << "Out[gid]=A[idx_a]" << bin_symbol(node.op) << "B[idx_b];}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
@@ -173,9 +173,58 @@ void generateKernels(Graph& graph) {
                 body << "kernel void " << name
                      << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
                      << "uint gid [[thread_position_in_grid]]){";
-                emit_strided_index(body, "idx_a", node.shape, strides_s);
+                emit_linear_index(body, "idx_a", "gid", node.shape, strides_s);
                 body << "Out[gid]=A[idx_a];}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
+            case OpCode::SUM: {
+                if (node.inputs.size() != 1 || node.args.empty()) {
+                    throw std::runtime_error("generateKernels: SUM expects 1 input and args");
+                }
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const Node& src = graph.nodes[node.inputs[0]];
+                std::string name = "op_" + std::to_string(i) + "_sum";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "uint gid [[thread_position_in_grid]]){";
+                if (node.args.size() == 1) {
+                    const uint64_t in_numel = std::max<uint64_t>(numel_from_shape(src.shape), 1);
+                    body << "if(gid>0)return;float t=0;";
+                    body << "for(uint i=0;i<" << in_numel << "u;++i){";
+                    emit_linear_index(body, "idx", "i", src.shape, src.strides);
+                    body << "t+=A[idx];}Out[0]=t;}\n";
+                    graph.configs.push_back(dispatch_config(name, 1));
+                } else {
+                    int64_t axis = node.args[0];
+                    const int64_t rank = static_cast<int64_t>(src.shape.size());
+                    if (axis < 0) axis += rank;
+                    std::vector<int64_t> squeezed;
+                    squeezed.reserve(src.shape.size());
+                    for (int64_t d = 0; d < rank; ++d) {
+                        if (d != axis) squeezed.push_back(src.shape[static_cast<size_t>(d)]);
+                    }
+                    const uint64_t axis_size =
+                        src.shape.empty() ? 1 : static_cast<uint64_t>(src.shape[static_cast<size_t>(axis)]);
+                    const int64_t axis_stride =
+                        src.strides.empty() ? 0 : src.strides[static_cast<size_t>(axis)];
+                    body << "long base=0;{uint remaining=gid;";
+                    int s = static_cast<int>(squeezed.size()) - 1;
+                    for (int d = static_cast<int>(rank) - 1; d >= 0; --d) {
+                        if (d == axis) continue;
+                        body << "{uint c=remaining%" << (uint64_t)squeezed[s] << "u;base+=long(c)*"
+                             << src.strides[d] << "L;remaining/=" << (uint64_t)squeezed[s] << "u;}";
+                        --s;
+                    }
+                    body << "}float t=0;for(uint j=0;j<" << axis_size
+                         << "u;++j)t+=A[base+long(j)*" << axis_stride << "L];Out[gid]=t;}\n";
+                    graph.configs.push_back(dispatch_config(name, numel));
+                }
                 any_kernel = true;
                 break;
             }
