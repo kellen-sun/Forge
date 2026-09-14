@@ -46,7 +46,7 @@ INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
                                            "sum_global", "sum_axis", "unary_exp", "zeros",
                                            "random_factories", "update", "update_arithmetic",
                                            "matmul_2d", "matmul_vector", "matmul_batched",
-                                           "constant_fold"));
+                                           "constant_fold", "cse_duplicate"));
 
 TEST(Codegen, UnaryKindsEmitNamedKernels) {
     for (int kind = 0; kind < kUnaryCount; ++kind) {

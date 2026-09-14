@@ -13,6 +13,7 @@ add_executable(forge_tests
     test_array_helpers.cpp
     test_constant_args.cpp
     test_constant_fold.cpp
+    test_cse.cpp
     test_codegen.cpp
     test_py_cpp_abi.cpp
     test_verify.cpp
