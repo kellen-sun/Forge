@@ -26,5 +26,12 @@ def f(a, b):
 print(f(Array([1.0, 2.0]), Array([3.0, 4.0])).list())
 ```
 
-Currently this covers elementwise add/sub/mul/div, views, and scalar constants. Matmul, reductions, and in-place update are still eager-only.
+Currently this covers:
+
+- elementwise add/sub/mul/div (including scalar constants and reverse ops like `2.0 * x`)
+- elementwise unaries: `exp`, `exp2`, `exp10`, `log`, `log2`, `log10`, `sqrt`, `rsqrt`, `abs`, `sign`, `ceil`, `floor`, `round`, `trunc`, `fract`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sinh`, `cosh`, `tanh` (methods on the array or `Forge.exp(x)`, etc.)
+- reductions: `.sum()` / `.sum(axis=..., keepdims=...)`
+- views, reshape, and transpose
+
+Not yet compiled: matmul (`@`), in-place update (`x[i] = ...`, `+=`), and factories (`rand` / `randn` / `zeros`). Those still run eager-only.
 
