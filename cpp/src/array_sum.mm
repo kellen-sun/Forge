@@ -48,8 +48,11 @@ std::shared_ptr<ArrayHandle> sum_global(const std::shared_ptr<ArrayHandle>& A, b
     uint in_numel = numel_from_shape(A->shape());
     [enc setBytes:&in_numel length:4 atIndex:6];
 
-    MTLSize grid = MTLSizeMake(1, 1, 1);
-    MTLSize threads = MTLSizeMake(1, 1, 1);
+    uint tg = 256;
+    if (in_numel > 0 && in_numel < tg) tg = in_numel;
+    if (tg == 0) tg = 1;
+    MTLSize grid = MTLSizeMake(tg, 1, 1);
+    MTLSize threads = MTLSizeMake(tg, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:threads];
     [enc endEncoding];
 
