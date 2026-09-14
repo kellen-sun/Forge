@@ -2,6 +2,7 @@ from typing import Sequence, Union
 
 from . import _backend
 from .array import Array
+from .utils import _normalize_sum_axis
 
 
 def _to_array(x):
@@ -110,16 +111,7 @@ def sum(self, axis=None, keepdims=False):
         out_array = Array.from_handle(h)
         return out_array
 
-    if not isinstance(axis, int):
-        raise TypeError("axis must be an integer or None")
-
-    if axis < 0:
-        axis += len(self.shape)
-    if axis < 0 or axis >= len(self.shape):
-        raise IndexError(
-            f"Array: Axis {axis} is out of bounds for Array of dimension {len(self.shape)}"
-        )
-
+    axis = _normalize_sum_axis(self.shape, axis)
     h = _backend.sum_axis(self._handle, axis, keepdims)
     return Array.from_handle(h)
 
