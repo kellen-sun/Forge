@@ -15,6 +15,7 @@ void optimize_graph(IR& ir) {
     pm.addPass(std::make_unique<ShapeInferPass>());
     pm.addPass(std::make_unique<CanonicalizePass>());
     pm.addPass(std::make_unique<ConstantFoldPass>());
+    pm.addPass(std::make_unique<CSEPass>());
     pm.addPass(std::make_unique<DCEPass>());
     pm.run(ir);
 }
