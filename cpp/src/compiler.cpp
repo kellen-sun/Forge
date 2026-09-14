@@ -132,6 +132,20 @@ void generateKernels(Graph& graph) {
                 break;
             }
 
+            case OpCode::ZEROS: {
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                std::string name = "op_" + std::to_string(i) + "_zeros";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],uint gid [[thread_position_in_grid]]){"
+                     << "Out[gid]=0.0f;}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
             case OpCode::ADD:
             case OpCode::SUB:
             case OpCode::MUL:
