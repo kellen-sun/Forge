@@ -178,11 +178,14 @@ kernel void reduce_sum_global(
     constant uint& in_ndim      [[ buffer(5) ]],
     constant uint& in_numel     [[ buffer(6) ]],
 
-    uint gid                    [[ thread_position_in_grid ]])
+    uint tid                    [[ thread_index_in_threadgroup ]],
+    uint simd_lane              [[ thread_index_in_simdgroup ]],
+    uint simd_id                [[ simdgroup_index_in_threadgroup ]],
+    uint tg_size                [[ threads_per_threadgroup ]])
 {
-    if (gid > 0) return;
+    threadgroup float scratch[32];
     float total = 0.0;
-    for (uint i = 0; i < in_numel; ++i) {
+    for (uint i = tid; i < in_numel; i += tg_size) {
         uint physical_idx = in_offset;
         uint remaining = i;
         for (int d = in_ndim - 1; d >= 0; --d) {
@@ -192,7 +195,15 @@ kernel void reduce_sum_global(
         }
         total += Input[physical_idx];
     }
-    Output[0] = total;
+    total = simd_sum(total);
+    if (simd_lane == 0) scratch[simd_id] = total;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid == 0) {
+        float s = 0.0;
+        uint nsimd = (tg_size + 31u) / 32u;
+        for (uint k = 0; k < nsimd; ++k) s += scratch[k];
+        Output[0] = s;
+    }
 }
 
 kernel void reduce_sum_axis(

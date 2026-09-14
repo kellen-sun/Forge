@@ -1,6 +1,6 @@
 - 1 1 1 1 1 1
-op_1_sum 1 1 1 1 1 1
+op_1_sum 4 1 1 4 1 1
 ---
 #include <metal_stdlib>
 using namespace metal;
-kernel void op_1_sum(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],uint gid [[thread_position_in_grid]]){if(gid>0)return;float t=0;for(uint i=0;i<4u;++i){long idx=0;{uint remaining=i;{uint c=remaining%2u;idx+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx+=long(c)*2L;remaining/=2u;}}t+=A[idx];}Out[0]=t;}
+kernel void op_1_sum(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],uint tid [[thread_index_in_threadgroup]],uint simd_lane [[thread_index_in_simdgroup]],uint simd_id [[simdgroup_index_in_threadgroup]],uint tg_size [[threads_per_threadgroup]]){threadgroup float scratch[32];float t=0;for(uint i=tid;i<4u;i+=tg_size){long idx=0;{uint remaining=i;{uint c=remaining%2u;idx+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx+=long(c)*2L;remaining/=2u;}}t+=A[idx];}t=simd_sum(t);if(simd_lane==0)scratch[simd_id]=t;threadgroup_barrier(mem_flags::mem_threadgroup);if(tid==0){float s=0;uint ns=(tg_size+31u)/32u;for(uint k=0;k<ns;++k)s+=scratch[k];Out[0]=s;}}
