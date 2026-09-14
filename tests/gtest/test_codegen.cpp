@@ -43,7 +43,8 @@ TEST_P(CodegenGoldenTest, MatchesGolden) {
 INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
                          ::testing::Values("identity", "add_2x2", "add_const", "view_add",
                                            "dce_dead_add", "canonicalize_identity_reshape",
-                                           "sum_global", "sum_axis", "unary_exp"));
+                                           "sum_global", "sum_axis", "unary_exp", "zeros",
+                                           "random_factories"));
 
 TEST(Codegen, UnaryKindsEmitNamedKernels) {
     for (int kind = 0; kind < kUnaryCount; ++kind) {
@@ -63,18 +64,3 @@ TEST(Codegen, UnaryKindsEmitNamedKernels) {
     }
 }
 
-TEST(Codegen, ZerosEmitsOutputOnlyFillKernel) {
-    Node zeros;
-    zeros.op = OpCode::ZEROS;
-    zeros.shape = {2, 3};
-    zeros.strides = {3, 1};
-    zeros.offset = 0;
-
-    Graph g{{zeros}, 0};
-    generateKernels(g);
-
-    ASSERT_EQ(g.configs.size(), 1u);
-    EXPECT_EQ(g.configs[0].name, "op_0_zeros");
-    EXPECT_NE(g.shader_source.find("device float* Out [[buffer(0)]]"), std::string::npos);
-    EXPECT_NE(g.shader_source.find("Out[gid]=0.0f;"), std::string::npos);
-}

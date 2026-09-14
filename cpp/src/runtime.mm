@@ -10,6 +10,8 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     auto defaultForgeHandle = get_default_forge();
     id<MTLDevice> device = (__bridge id<MTLDevice>)defaultForgeHandle->device_ptr();
     id<MTLCommandQueue> queue = (__bridge id<MTLCommandQueue>)defaultForgeHandle->queue_ptr();
+    uint32_t random_seed = defaultForgeHandle->get_seed();
+    bool used_random = false;
     id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
 
@@ -72,6 +74,11 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
 
             [computeEncoder setBuffer:in_buf offset:in_offset atIndex:bind_index++];
         }
+        if (node.op == OpCode::RAND || node.op == OpCode::RANDN) {
+            [computeEncoder setBytes:&random_seed length:sizeof(random_seed) atIndex:bind_index];
+            random_seed += static_cast<uint32_t>(numel_from_shape(node.shape));
+            used_random = true;
+        }
 
         // c) Launch the kernels one by one
         MTLSize grid = MTLSizeMake(config.grid[0], config.grid[1], config.grid[2]);
@@ -86,6 +93,7 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     }
     [computeEncoder endEncoding];
     [commandBuffer commit];
+    if (used_random) defaultForgeHandle->set_seed(random_seed);
     output_handle->set_event(commandBuffer);
     return output_handle;
 }

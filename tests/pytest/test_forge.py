@@ -114,6 +114,29 @@ def test_forge_zeros_in_expression():
     assert compiled.shape == eager.shape
 
 
+@pytest.mark.parametrize("op_name", ["rand", "randn"])
+def test_forge_random_factory_seed_progression(op_name):
+    factory = getattr(Forge, op_name)
+
+    @forge
+    def f():
+        return factory(2, 3)
+
+    Forge.set_seed(42)
+    eager = factory(2, 3)
+    Forge.set_seed(42)
+    compiled = f()
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+    next_compiled = f()
+    assert next_compiled.list() != compiled.list()
+
+    Forge.set_seed(42)
+    replay = f()
+    assert replay.list() == compiled.list()
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):

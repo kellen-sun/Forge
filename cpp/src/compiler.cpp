@@ -102,6 +102,7 @@ void generateKernels(Graph& graph) {
 
     std::ostringstream body;
     bool any_kernel = false;
+    bool random_helpers_emitted = false;
 
     for (size_t i = 0; i < graph.nodes.size(); ++i) {
         const Node& node = graph.nodes[i];
@@ -141,6 +142,38 @@ void generateKernels(Graph& graph) {
                 body << "kernel void " << name
                      << "(device float* Out [[buffer(0)]],uint gid [[thread_position_in_grid]]){"
                      << "Out[gid]=0.0f;}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
+            case OpCode::RAND:
+            case OpCode::RANDN: {
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                if (!random_helpers_emitted) {
+                    body << "uint forge_hash(uint seed){"
+                            "seed=(seed^61u)^(seed>>16);seed*=9u;seed=seed^(seed>>4);"
+                            "seed*=0x27d4eb2du;seed=seed^(seed>>15);return seed;}"
+                            "float forge_rand_uniform(uint gid,uint base_seed){"
+                            "return float(forge_hash(base_seed+gid))/4294967295.0f;}"
+                            "float forge_rand_normal(uint gid,uint base_seed){"
+                            "float u1=max(forge_rand_uniform(gid*2u,base_seed),1e-7f);"
+                            "float u2=forge_rand_uniform(gid*2u+1u,base_seed);"
+                            "float r=sqrt(-2.0f*log(u1));"
+                            "float theta=2.0f*3.14159265359f*u2;return r*cos(theta);}";
+                    random_helpers_emitted = true;
+                }
+                const bool normal = node.op == OpCode::RANDN;
+                const std::string name =
+                    "op_" + std::to_string(i) + (normal ? "_randn" : "_rand");
+                const char* function = normal ? "forge_rand_normal" : "forge_rand_uniform";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],constant uint& seed [[buffer(1)]],"
+                     << "uint gid [[thread_position_in_grid]]){"
+                     << "Out[gid]=" << function << "(gid,seed);}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;

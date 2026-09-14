@@ -1,0 +1,9 @@
+op_0_rand 4 1 1 4 1 1
+op_1_randn 4 1 1 4 1 1
+op_2_add 4 1 1 4 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+uint forge_hash(uint seed){seed=(seed^61u)^(seed>>16);seed*=9u;seed=seed^(seed>>4);seed*=0x27d4eb2du;seed=seed^(seed>>15);return seed;}float forge_rand_uniform(uint gid,uint base_seed){return float(forge_hash(base_seed+gid))/4294967295.0f;}float forge_rand_normal(uint gid,uint base_seed){float u1=max(forge_rand_uniform(gid*2u,base_seed),1e-7f);float u2=forge_rand_uniform(gid*2u+1u,base_seed);float r=sqrt(-2.0f*log(u1));float theta=2.0f*3.14159265359f*u2;return r*cos(theta);}kernel void op_0_rand(device float* Out [[buffer(0)]],constant uint& seed [[buffer(1)]],uint gid [[thread_position_in_grid]]){Out[gid]=forge_rand_uniform(gid,seed);}
+kernel void op_1_randn(device float* Out [[buffer(0)]],constant uint& seed [[buffer(1)]],uint gid [[thread_position_in_grid]]){Out[gid]=forge_rand_normal(gid,seed);}
+kernel void op_2_add(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){long idx_a=0;{uint remaining=gid;{uint c=remaining%2u;idx_a+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_a+=long(c)*2L;remaining/=2u;}}long idx_b=0;{uint remaining=gid;{uint c=remaining%2u;idx_b+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_b+=long(c)*2L;remaining/=2u;}}Out[gid]=A[idx_a]+B[idx_b];}

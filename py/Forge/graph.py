@@ -14,6 +14,8 @@ class Ops:
     SUM = 12
     UNARY = 13
     ZEROS = 14
+    RAND = 15
+    RANDN = 16
 
 
 class Node:
