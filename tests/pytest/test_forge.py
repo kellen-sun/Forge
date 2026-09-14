@@ -83,6 +83,38 @@ def test_forge_matmul_batched_broadcast():
     assert compiled.shape == eager.shape
 
 
+def test_forge_matmul_4d_broadcast_both_batches():
+    @forge
+    def f(a, b):
+        return a @ b
+
+    a_data = [
+        [
+            [
+                [1.0 + batch, 2.0 + batch, 3.0 + batch],
+                [4.0 + batch, 5.0 + batch, 6.0 + batch],
+            ]
+        ]
+        for batch in range(2)
+    ]
+    b_data = [
+        [
+            [
+                [1.0 + batch, 2.0 + batch],
+                [3.0 + batch, 4.0 + batch],
+                [5.0 + batch, 6.0 + batch],
+            ]
+            for batch in range(3)
+        ]
+    ]
+    a = Array(a_data)
+    b = Array(b_data)
+    eager = a @ b
+    compiled = f(a, b)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_broadcast():
     @forge
     def f(a, b):
