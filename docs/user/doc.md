@@ -36,7 +36,7 @@ Currently this covers:
 - random factories: `rand` and `randn` (with runtime seed progression)
 - indexed assignment inside `@forge`: `x[key] = value` for scalar or matching-shape, non-overlapping RHS
 - arithmetic assignment inside `@forge`: `+=`, `-=`, `*=`, `/=`
-- 2D matrix multiplication inside `@forge`, including transposed 2D inputs
+- vector and 2D matrix multiplication inside `@forge`, including transposed 2D inputs
 
-Not yet compiled: batched/vector matmul and tiled matmul optimization
+Not yet compiled: batched matmul and tiled matmul optimization
 
