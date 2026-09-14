@@ -32,6 +32,7 @@ Currently this covers:
 - elementwise unaries: `exp`, `exp2`, `exp10`, `log`, `log2`, `log10`, `sqrt`, `rsqrt`, `abs`, `sign`, `ceil`, `floor`, `round`, `trunc`, `fract`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sinh`, `cosh`, `tanh` (methods on the array or `Forge.exp(x)`, etc.)
 - reductions: `.sum()` / `.sum(axis=..., keepdims=...)`
 - views, reshape, and transpose
+- `zeros`
 
-Not yet compiled: matmul (`@`), in-place update (`x[i] = ...`, `+=`), and factories (`rand` / `randn` / `zeros`). Those still run eager-only.
+Not yet compiled: matmul (`@`), in-place update (`x[i] = ...`, `+=`), and random factories (`rand` / `randn`)
 
