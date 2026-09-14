@@ -12,5 +12,7 @@ enum class OpCode : int {
     VIEW = 8,
     UPDATE = 9,
     CONSTANT = 10,
-    COPY = 11
+    COPY = 11,
+    // Add new ops before COUNT which is a sentinel for the number of opcodes
+    COUNT
 };
