@@ -62,3 +62,19 @@ TEST(Codegen, UnaryKindsEmitNamedKernels) {
         EXPECT_EQ(g.configs[1].name, std::string("op_1_") + kUnaryNames[kind]);
     }
 }
+
+TEST(Codegen, ZerosEmitsOutputOnlyFillKernel) {
+    Node zeros;
+    zeros.op = OpCode::ZEROS;
+    zeros.shape = {2, 3};
+    zeros.strides = {3, 1};
+    zeros.offset = 0;
+
+    Graph g{{zeros}, 0};
+    generateKernels(g);
+
+    ASSERT_EQ(g.configs.size(), 1u);
+    EXPECT_EQ(g.configs[0].name, "op_0_zeros");
+    EXPECT_NE(g.shader_source.find("device float* Out [[buffer(0)]]"), std::string::npos);
+    EXPECT_NE(g.shader_source.find("Out[gid]=0.0f;"), std::string::npos);
+}

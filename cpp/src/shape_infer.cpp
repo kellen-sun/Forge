@@ -71,6 +71,7 @@ static const std::array<InferFn, kOpCount> kInfer = [] {
     std::array<InferFn, kOpCount> t{};
     t[static_cast<int>(OpCode::INPUT)] = keep;
     t[static_cast<int>(OpCode::CONSTANT)] = keep;
+    t[static_cast<int>(OpCode::ZEROS)] = keep;
     t[static_cast<int>(OpCode::VIEW)] = keep;
     t[static_cast<int>(OpCode::TRANSPOSE)] = keep;
     t[static_cast<int>(OpCode::ADD)] = infer_binary;

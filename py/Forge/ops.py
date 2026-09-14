@@ -2,8 +2,10 @@ from typing import Sequence, Union
 
 from . import _backend
 from .array import Array
+from . import graph
+from .graph import Node, Ops
 from .symbolic import SymbolicArray
-from .utils import _normalize_sum_axis
+from .utils import _default_strides, _normalize_sum_axis
 
 
 def _to_array(x):
@@ -104,6 +106,17 @@ for op_name in NULLARY_OPS:
                 shape = list(arg)
         else:
             shape = list(shape)
+        if op_name == "zeros" and graph.CURRENT_GRAPH is not None:
+            shape = tuple(shape)
+            node = Node(
+                Ops.ZEROS,
+                [],
+                shape,
+                0,
+                _default_strides(shape),
+            )
+            graph.CURRENT_GRAPH.add(node)
+            return SymbolicArray(node)
         return Array.from_handle(_fn(shape))
 
     nullary_wrapper.__name__ = op_name

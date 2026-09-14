@@ -13,6 +13,7 @@ class Ops:
     COPY = 11
     SUM = 12
     UNARY = 13
+    ZEROS = 14
 
 
 class Node:

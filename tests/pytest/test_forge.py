@@ -91,6 +91,29 @@ def test_forge_add_constant():
     assert compiled.shape == eager.shape
 
 
+def test_forge_zeros():
+    @forge
+    def f():
+        return Forge.zeros(2, 3)
+
+    eager = Forge.zeros(2, 3)
+    compiled = f()
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
+def test_forge_zeros_in_expression():
+    @forge
+    def f(x):
+        return x + Forge.zeros(x.shape)
+
+    x = Array([[1.0, 2.0], [3.0, 4.0]])
+    eager = x + Forge.zeros(x.shape)
+    compiled = f(x)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):
