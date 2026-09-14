@@ -214,6 +214,27 @@ std::vector<int64_t> matmul_output_shape(const std::vector<int64_t>& a_shape,
     return out;
 }
 
+std::vector<int64_t> sum_output_shape(const std::vector<int64_t>& in_shape, bool keepdims) {
+    if (keepdims) return std::vector<int64_t>(in_shape.size(), 1);
+    return {};
+}
+
+std::vector<int64_t> sum_output_shape(const std::vector<int64_t>& in_shape, int64_t axis,
+                                      bool keepdims) {
+    const int64_t rank = static_cast<int64_t>(in_shape.size());
+    if (axis < 0) axis += rank;
+    if (axis < 0 || axis >= rank) {
+        throw std::runtime_error("sum: axis out of bounds");
+    }
+    auto out = in_shape;
+    if (keepdims) {
+        out[static_cast<size_t>(axis)] = 1;
+    } else {
+        out.erase(out.begin() + axis);
+    }
+    return out;
+}
+
 std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
                                        const std::vector<int64_t>& strides,
                                        const std::vector<int64_t>& final_shape) {
