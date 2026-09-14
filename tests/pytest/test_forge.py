@@ -44,6 +44,28 @@ def test_forge_matmul_2d_transposed_input():
     assert compiled.shape == eager.shape
 
 
+@pytest.mark.parametrize("case", ["matvec", "vecmat", "vecvec"])
+def test_forge_matmul_vectors(case):
+    @forge
+    def f(a, b):
+        return a @ b
+
+    if case == "matvec":
+        a = Array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        b = Array([7.0, 8.0, 9.0])
+    elif case == "vecmat":
+        a = Array([1.0, 2.0, 3.0])
+        b = Array([[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]])
+    else:
+        a = Array([1.0, 2.0, 3.0])
+        b = Array([7.0, 9.0, 11.0])
+
+    eager = a @ b
+    compiled = f(a, b)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_broadcast():
     @forge
     def f(a, b):
