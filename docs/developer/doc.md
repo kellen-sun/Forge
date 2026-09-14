@@ -69,7 +69,7 @@ Run:
 ```
 Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
 
-``UNARY_OPS`` in ``py/Forge/ops.py`` must match ``kUnaryNames`` in ``cpp/include/common.h`` (same names, same order). Gtest ``Codegen.UnaryOpsPythonMatchesCommonH`` checks this in CI.
+Python and C++ tables that must stay synced (opcodes, unary/nullary names, eager Metal kernel names) are checked by gtests in ``tests/gtest/test_py_cpp_abi.cpp``. That runs in GitHub CI.
 
 
 ##### Codegen goldens

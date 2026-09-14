@@ -9,29 +9,6 @@
 #ifndef FORGE_GTEST_DIR
 #define FORGE_GTEST_DIR "../tests/gtest"
 #endif
-#ifndef FORGE_SOURCE_DIR
-#define FORGE_SOURCE_DIR ".."
-#endif
-
-static std::vector<std::string> quoted_strings_in_list(const std::string& text, const std::string& marker,
-                                                       char open, char close) {
-    const auto mark = text.find(marker);
-    if (mark == std::string::npos) return {};
-    const auto begin = text.find(open, mark);
-    if (begin == std::string::npos) return {};
-    const auto end = text.find(close, begin + 1);
-    if (end == std::string::npos) return {};
-    const std::string region = text.substr(begin, end - begin);
-    std::vector<std::string> names;
-    for (size_t i = 0; i < region.size(); ++i) {
-        if (region[i] != '"') continue;
-        const auto j = region.find('"', i + 1);
-        if (j == std::string::npos) break;
-        names.push_back(region.substr(i + 1, j - i - 1));
-        i = j;
-    }
-    return names;
-}
 
 class CodegenGoldenTest : public ::testing::TestWithParam<std::string> {};
 
@@ -67,20 +44,6 @@ INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
                          ::testing::Values("identity", "add_2x2", "add_const", "view_add",
                                            "dce_dead_add", "canonicalize_identity_reshape",
                                            "sum_global", "sum_axis", "unary_exp"));
-
-TEST(Codegen, UnaryOpsPythonMatchesCommonH) {
-    const std::string py = read_file(std::string(FORGE_SOURCE_DIR) + "/py/Forge/ops.py");
-    const std::string cc = read_file(std::string(FORGE_SOURCE_DIR) + "/cpp/include/common.h");
-    const auto from_py = quoted_strings_in_list(py, "UNARY_OPS", '[', ']');
-    const auto from_h = quoted_strings_in_list(cc, "kUnaryNames", '{', '}');
-    ASSERT_FALSE(from_py.empty());
-    ASSERT_EQ(from_py, from_h) << "keep py/Forge/ops.py UNARY_OPS in lockstep with "
-                                  "kUnaryNames in cpp/include/common.h";
-    ASSERT_EQ(static_cast<int>(from_h.size()), kUnaryCount);
-    for (int i = 0; i < kUnaryCount; ++i) {
-        EXPECT_STREQ(from_h[static_cast<size_t>(i)].c_str(), kUnaryNames[i]);
-    }
-}
 
 TEST(Codegen, UnaryKindsEmitNamedKernels) {
     for (int kind = 0; kind < kUnaryCount; ++kind) {
