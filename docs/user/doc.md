@@ -33,6 +33,7 @@ Currently this covers:
 - reductions: `.sum()` / `.sum(axis=..., keepdims=...)`
 - views, reshape, and transpose
 - `zeros`
+- random factories: `rand` and `randn` (with runtime seed progression)
 
-Not yet compiled: matmul (`@`), in-place update (`x[i] = ...`, `+=`), and random factories (`rand` / `randn`)
+Not yet compiled: matmul (`@`) and in-place update (`x[i] = ...`, `+=`)
 
