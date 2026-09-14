@@ -44,7 +44,8 @@ INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
                          ::testing::Values("identity", "add_2x2", "add_const", "view_add",
                                            "dce_dead_add", "canonicalize_identity_reshape",
                                            "sum_global", "sum_axis", "unary_exp", "zeros",
-                                           "random_factories", "update", "update_arithmetic"));
+                                           "random_factories", "update", "update_arithmetic",
+                                           "matmul_2d"));
 
 TEST(Codegen, UnaryKindsEmitNamedKernels) {
     for (int kind = 0; kind < kUnaryCount; ++kind) {
