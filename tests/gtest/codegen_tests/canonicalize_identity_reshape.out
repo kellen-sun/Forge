@@ -1,0 +1,7 @@
+- 1 1 1 1 1 1
+- 1 1 1 1 1 1
+op_2_add 4 1 1 4 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_2_add(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){long idx_a=0;{uint remaining=gid;{uint c=remaining%2u;idx_a+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_a+=long(c)*2L;remaining/=2u;}}long idx_b=0;{uint remaining=gid;{uint c=remaining%2u;idx_b+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_b+=long(c)*2L;remaining/=2u;}}Out[gid]=A[idx_a]+B[idx_b];}

@@ -10,6 +10,7 @@
 
 void optimize_graph(IR& ir) {
     PassManager pm;
+    pm.addPass(std::make_unique<CanonicalizePass>());
     pm.addPass(std::make_unique<DCEPass>());
     pm.run(ir);
 }
