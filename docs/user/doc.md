@@ -34,6 +34,7 @@ Currently this covers:
 - views, reshape, and transpose
 - `zeros`
 - random factories: `rand` and `randn` (with runtime seed progression)
+- indexed assignment inside `@forge`: `x[key] = value` for scalar or matching-shape, non-overlapping RHS
 
-Not yet compiled: matmul (`@`) and in-place update (`x[i] = ...`, `+=`)
+Not yet compiled: matmul (`@`) and in-place arithmetic (`+=`, `-=`, `*=`, `/=`)
 
