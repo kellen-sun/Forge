@@ -8,6 +8,8 @@ static int expected_arity(OpCode op) {
         case OpCode::INPUT:
         case OpCode::CONSTANT:
         case OpCode::ZEROS:
+        case OpCode::RAND:
+        case OpCode::RANDN:
             return 0;
         case OpCode::RESHAPE:
         case OpCode::TRANSPOSE:
