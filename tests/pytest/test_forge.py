@@ -195,6 +195,34 @@ def test_forge_update_rejects_overlapping_rhs():
         f(Array([1.0, 2.0, 3.0]))
 
 
+@pytest.mark.parametrize(
+    ("op_name", "expected"),
+    [
+        ("iadd", [4.0, 6.0]),
+        ("isub", [-2.0, -2.0]),
+        ("imul", [3.0, 8.0]),
+        ("idiv", [1.0 / 3.0, 0.5]),
+    ],
+)
+def test_forge_arithmetic_update(op_name, expected):
+    @forge
+    def f(x, value):
+        if op_name == "iadd":
+            x += value
+        elif op_name == "isub":
+            x -= value
+        elif op_name == "imul":
+            x *= value
+        else:
+            x /= value
+        return x
+
+    x = Array([1.0, 2.0])
+    value = Array([3.0, 4.0])
+    result = f(x, value)
+    assert result.list() == pytest.approx(expected, rel=1e-6)
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):
