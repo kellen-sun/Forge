@@ -161,6 +161,40 @@ def test_forge_update_strided_view():
     assert result.list() == [10.0, 1.0, 20.0, 3.0]
 
 
+def test_forge_update_input_side_effect_when_not_returned():
+    @forge
+    def f(x, y):
+        x[0] = 7.0
+        return y
+
+    x = Array([1.0, 2.0])
+    y = Array([9.0])
+    result = f(x, y)
+    assert result.list() == [9.0]
+    assert x.list() == [7.0, 2.0]
+
+
+def test_forge_updates_execute_in_order():
+    @forge
+    def f(x):
+        x[:] = 3.0
+        x[1] = 4.0
+        return x
+
+    x = Array([0.0, 0.0, 0.0])
+    assert f(x).list() == [3.0, 4.0, 3.0]
+
+
+def test_forge_update_rejects_overlapping_rhs():
+    @forge
+    def f(x):
+        x[1:] = x[:-1]
+        return x
+
+    with pytest.raises(RuntimeError, match="overlapping"):
+        f(Array([1.0, 2.0, 3.0]))
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):

@@ -46,3 +46,8 @@ TEST(ArrayHelpersTest, sum_output_shape) {
     EXPECT_EQ(sum_output_shape({2, 3}, -1, false), (std::vector<int64_t>{2}));
     EXPECT_THROW(sum_output_shape({2, 3}, 2, false), std::runtime_error);
 }
+
+TEST(ArrayHelpersTest, ScalarBroadcastToRankZero) {
+    EXPECT_EQ(get_bcast_strides({1}, {1}, {}), (std::vector<int64_t>{}));
+    EXPECT_EQ(get_bcast_strides({1}, {1}, {2, 3}), (std::vector<int64_t>{0, 0}));
+}
