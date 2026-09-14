@@ -12,6 +12,7 @@ static int expected_arity(OpCode op) {
         case OpCode::TRANSPOSE:
         case OpCode::VIEW:
         case OpCode::COPY:
+        case OpCode::SUM:
             return 1;
         case OpCode::MATMUL:
         case OpCode::ADD:
@@ -20,6 +21,8 @@ static int expected_arity(OpCode op) {
         case OpCode::SUB:
         case OpCode::UPDATE:
             return 2;
+        case OpCode::COUNT:
+            return -1;
     }
     return -1;
 }
@@ -49,6 +52,9 @@ void verify(const IR& ir) {
         if (node.op == OpCode::CONSTANT && node.args.empty()) {
             throw std::runtime_error("verify: CONSTANT node " + std::to_string(i) +
                                      " missing value");
+        }
+        if (node.op == OpCode::SUM && node.args.empty()) {
+            throw std::runtime_error("verify: SUM node " + std::to_string(i) + " missing args");
         }
         for (int inp : node.inputs) {
             if (inp < 0 || inp >= n) {
