@@ -23,8 +23,11 @@ add_library(forge_lib STATIC
     cpp/src/array_sum.mm
     cpp/src/compiler.cpp
     cpp/src/compiler.mm
+    cpp/src/dce.cpp
     cpp/src/forge_handle.mm
     cpp/src/memory_arena.cpp
+    cpp/src/pass_manager.cpp
+    cpp/src/verify.cpp
     cpp/src/metal_utils.mm
     cpp/src/runtime.mm
 )

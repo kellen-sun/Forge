@@ -1,12 +1,18 @@
 #include <algorithm>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 #include "../include/array_handle.h"
 #include "../include/compiler.h"
+#include "../include/pass.h"
 
-std::vector<Node> optimize_graph(std::vector<Node> raw_nodes) { return raw_nodes; }
+void optimize_graph(IR& ir) {
+    PassManager pm;
+    pm.addPass(std::make_unique<DCEPass>());
+    pm.run(ir);
+}
 // Could generate Fused Kernels, with special OpCodes
 // Description of which fusedkernel for the OpCode given in the OpCodes "Arg" parameter
 // Read about MLIR & TVM as options here instead of doing it here

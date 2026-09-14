@@ -89,12 +89,13 @@ std::vector<Node> parse_nodes(nb::list flat_nodes) {
 
 std::shared_ptr<Graph> make_graph(nb::list flat_nodes, int output_index) {
     // 1. Get the basic graph
-    std::vector<Node> raw_nodes = parse_nodes(flat_nodes);
+    IR ir;
+    ir.nodes = parse_nodes(flat_nodes);
+    ir.output_index = output_index;
     // 2. Optimize graph
-    std::vector<Node> optimized_nodes = optimize_graph(raw_nodes);
+    optimize_graph(ir);
     // 3. Make graph
-    // possible that output_index changes after compiling no?
-    auto graph = std::make_shared<Graph>(std::move(optimized_nodes), output_index);
+    auto graph = std::make_shared<Graph>(std::move(ir.nodes), ir.output_index);
     // 4. Get shared memory map (with some Data struct)
     graph->arena = std::make_shared<MemoryArena>(*graph);
     // 5. Compile Graph, to get strings of the relevant kernels and associated info
