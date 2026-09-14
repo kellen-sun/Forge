@@ -38,5 +38,5 @@ Currently this covers:
 - arithmetic assignment inside `@forge`: `+=`, `-=`, `*=`, `/=`
 - vector and 2D matrix multiplication inside `@forge`, including transposed 2D inputs
 
-Not yet compiled: batched matmul and tiled matmul optimization
+Not yet compiled: tiled matmul optimization
 

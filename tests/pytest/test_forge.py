@@ -66,6 +66,23 @@ def test_forge_matmul_vectors(case):
     assert compiled.shape == eager.shape
 
 
+def test_forge_matmul_batched_broadcast():
+    @forge
+    def f(a, b):
+        return a @ b
+
+    data = []
+    for i in range(4):
+        data.append([[i, i], [i, i]])
+    a_full = Array(data)
+    a = a_full[1:3]
+    b = Array([[1.0, 0.0], [0.0, 1.0]])
+    eager = a @ b
+    compiled = f(a, b)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_broadcast():
     @forge
     def f(a, b):
