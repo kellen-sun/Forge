@@ -228,15 +228,31 @@ void generateKernels(Graph& graph) {
                 }
                 const Node& a = graph.nodes[node.inputs[0]];
                 const Node& b = graph.nodes[node.inputs[1]];
-                if (a.shape.size() != 2 || b.shape.size() != 2 || node.shape.size() != 2) {
+                if (a.shape.size() < 1 || a.shape.size() > 2 || b.shape.size() < 1 ||
+                    b.shape.size() > 2 || node.shape.size() > 2) {
                     throw std::runtime_error(
-                        "generateKernels: initial MATMUL kernel supports 2D matrices only");
+                        "generateKernels: MATMUL supports vectors and 2D matrices only");
                 }
-                const uint64_t m = static_cast<uint64_t>(node.shape[0]);
-                const uint64_t n = static_cast<uint64_t>(node.shape[1]);
-                const uint64_t k = static_cast<uint64_t>(a.shape[1]);
-                if (a.shape[1] != b.shape[0]) {
+                const bool a_vector = a.shape.size() == 1;
+                const bool b_vector = b.shape.size() == 1;
+                const uint64_t m =
+                    static_cast<uint64_t>(a_vector ? 1 : a.shape[0]);
+                const uint64_t n =
+                    static_cast<uint64_t>(b_vector ? 1 : b.shape[1]);
+                const uint64_t k = static_cast<uint64_t>(
+                    a_vector ? a.shape[0] : a.shape[1]);
+                const uint64_t b_k = static_cast<uint64_t>(
+                    b_vector ? b.shape[0] : b.shape[0]);
+                if (k != b_k) {
                     throw std::runtime_error("generateKernels: MATMUL inner dimensions mismatch");
+                }
+                const int64_t a_row_stride = a_vector ? 0 : a.strides[0];
+                const int64_t a_col_stride = a_vector ? a.strides[0] : a.strides[1];
+                const int64_t b_row_stride = b.strides[0];
+                const int64_t b_col_stride = b_vector ? 0 : b.strides[1];
+                const size_t expected_output_rank = (a_vector && b_vector) ? 0 : 1 + (!a_vector && !b_vector);
+                if (node.shape.size() != expected_output_rank) {
+                    throw std::runtime_error("generateKernels: MATMUL output shape mismatch");
                 }
                 if (numel == 0) {
                     graph.configs.push_back(ghost_config());
@@ -250,8 +266,8 @@ void generateKernels(Graph& graph) {
                      << "uint row=gid/"
                      << n << "u;uint col=gid%" << n << "u;float total=0.0f;"
                      << "for(uint kk=0;kk<" << k << "u;++kk)total+=A[long(row)*"
-                     << a.strides[0] << "L+long(kk)*" << a.strides[1] << "L]*B[long(kk)*"
-                     << b.strides[0] << "L+long(col)*" << b.strides[1]
+                     << a_row_stride << "L+long(kk)*" << a_col_stride << "L]*B[long(kk)*"
+                     << b_row_stride << "L+long(col)*" << b_col_stride
                      << "L];Out[gid]=total;}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
