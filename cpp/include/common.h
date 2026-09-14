@@ -14,6 +14,15 @@ enum class OpCode : int {
     CONSTANT = 10,
     COPY = 11,
     SUM = 12,
+    UNARY = 13,
     // Add new ops before COUNT which is a sentinel for the number of opcodes
     COUNT
 };
+
+// Order must match py/Forge/ops.py UNARY_OPS
+inline constexpr const char* kUnaryNames[] = {
+    "exp",  "exp2", "exp10", "log",  "log2", "log10", "sqrt", "rsqrt", "abs",  "sign",
+    "ceil", "floor", "round", "trunc", "fract", "sin",  "cos",  "tan",   "asin", "acos",
+    "atan", "sinh",  "cosh",  "tanh",
+};
+inline constexpr int kUnaryCount = static_cast<int>(sizeof(kUnaryNames) / sizeof(kUnaryNames[0]));
