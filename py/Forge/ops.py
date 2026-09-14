@@ -2,6 +2,7 @@ from typing import Sequence, Union
 
 from . import _backend
 from .array import Array
+from .symbolic import SymbolicArray
 from .utils import _normalize_sum_axis
 
 
@@ -45,6 +46,7 @@ def array_matmul(self, other):
     return Array(_backend.matmul(self._handle, other._handle))
 
 
+# Order is OpCode.UNARY args[0]; keep in sync with kUnaryNames in cpp/include/common.h
 UNARY_OPS = [
     "exp",
     "exp2",
@@ -73,15 +75,18 @@ UNARY_OPS = [
 ]
 
 
-for op_name in UNARY_OPS:
+for kind, op_name in enumerate(UNARY_OPS):
     backend_fn = getattr(_backend, op_name)
 
-    def unary_wrapper(x: Array, _fn=backend_fn) -> Array:
+    def unary_wrapper(x, _fn=backend_fn, _kind=kind):
+        if isinstance(x, SymbolicArray):
+            return x._unary(_kind)
         return Array.from_handle(_fn(x._handle))
 
     unary_wrapper.__name__ = op_name
     globals()[op_name] = unary_wrapper
     setattr(Array, op_name, unary_wrapper)
+    setattr(SymbolicArray, op_name, unary_wrapper)
 
 
 NULLARY_OPS = ["rand", "randn", "zeros"]
