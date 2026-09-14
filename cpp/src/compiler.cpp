@@ -222,6 +222,42 @@ void generateKernels(Graph& graph) {
                 break;
             }
 
+            case OpCode::MATMUL: {
+                if (node.inputs.size() != 2) {
+                    throw std::runtime_error("generateKernels: MATMUL expects 2 inputs");
+                }
+                const Node& a = graph.nodes[node.inputs[0]];
+                const Node& b = graph.nodes[node.inputs[1]];
+                if (a.shape.size() != 2 || b.shape.size() != 2 || node.shape.size() != 2) {
+                    throw std::runtime_error(
+                        "generateKernels: initial MATMUL kernel supports 2D matrices only");
+                }
+                const uint64_t m = static_cast<uint64_t>(node.shape[0]);
+                const uint64_t n = static_cast<uint64_t>(node.shape[1]);
+                const uint64_t k = static_cast<uint64_t>(a.shape[1]);
+                if (a.shape[1] != b.shape[0]) {
+                    throw std::runtime_error("generateKernels: MATMUL inner dimensions mismatch");
+                }
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const std::string name = "op_" + std::to_string(i) + "_matmul";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "const device float* B [[buffer(2)]],uint gid "
+                        "[[thread_position_in_grid]]){"
+                     << "uint row=gid/"
+                     << n << "u;uint col=gid%" << n << "u;float total=0.0f;"
+                     << "for(uint kk=0;kk<" << k << "u;++kk)total+=A[long(row)*"
+                     << a.strides[0] << "L+long(kk)*" << a.strides[1] << "L]*B[long(kk)*"
+                     << b.strides[0] << "L+long(col)*" << b.strides[1]
+                     << "L];Out[gid]=total;}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
             case OpCode::UNARY: {
                 if (node.inputs.size() != 1 || node.args.empty()) {
                     throw std::runtime_error("generateKernels: UNARY expects 1 input and kind");
