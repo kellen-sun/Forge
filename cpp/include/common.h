@@ -15,6 +15,7 @@ enum class OpCode : int {
     COPY = 11,
     SUM = 12,
     UNARY = 13,
+    ZEROS = 14,
     // Add new ops before COUNT which is a sentinel for the number of opcodes
     COUNT
 };
