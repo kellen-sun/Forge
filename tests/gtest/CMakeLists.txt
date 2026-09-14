@@ -32,6 +32,7 @@ target_link_libraries(forge_tests
 
 target_compile_definitions(forge_tests PRIVATE
     FORGE_GTEST_DIR="${CMAKE_SOURCE_DIR}/tests/gtest"
+    FORGE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 include(GoogleTest)
