@@ -6,6 +6,7 @@
 
 #include "../include/array_handle.h"
 #include "../include/compiler.h"
+#include "../include/ir_utils.h"
 #include "../include/pass.h"
 
 void optimize_graph(IR& ir) {
@@ -85,17 +86,6 @@ static void emit_linear_index(std::ostringstream& src, const std::string& idx_na
             << strides[i] << "L;remaining/=" << (uint64_t)shape[i] << "u;}";
     }
     src << "}";
-}
-
-static bool is_layout_op(OpCode op) {
-    return op == OpCode::VIEW || op == OpCode::RESHAPE || op == OpCode::TRANSPOSE;
-}
-
-static int storage_root(const Graph& graph, int index) {
-    while (is_layout_op(graph.nodes[index].op)) {
-        index = graph.nodes[index].inputs[0];
-    }
-    return index;
 }
 
 static std::string f32_literal(float v) {
@@ -269,7 +259,8 @@ void generateKernels(Graph& graph) {
                     (node.args.size() - 1) % 2 != 0) {
                     throw std::runtime_error("generateKernels: UPDATE has invalid target metadata");
                 }
-                if (storage_root(graph, node.inputs[0]) == storage_root(graph, node.inputs[1])) {
+                if (storage_root(graph.nodes, node.inputs[0]) ==
+                    storage_root(graph.nodes, node.inputs[1])) {
                     throw std::runtime_error(
                         "generateKernels: UPDATE rejects potentially overlapping RHS and destination");
                 }
