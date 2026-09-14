@@ -1,0 +1,6 @@
+- 1 1 1 1 1 1
+op_1_exp 4 1 1 4 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_1_exp(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],uint gid [[thread_position_in_grid]]){long idx_a=0;{uint remaining=gid;{uint c=remaining%2u;idx_a+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_a+=long(c)*2L;remaining/=2u;}}Out[gid]=exp(A[idx_a]);}
