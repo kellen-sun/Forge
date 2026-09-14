@@ -22,6 +22,21 @@ TEST(Verify, RejectsOutOfRangeOperand) {
     EXPECT_THROW(verify(ir), std::runtime_error);
 }
 
+TEST(Verify, RejectsUnknownUnaryKind) {
+    Node u;
+    u.op = OpCode::UNARY;
+    u.inputs = {0};
+    u.shape = {2};
+    u.strides = {1};
+    u.offset = 0;
+    u.args = {99};
+
+    IR ir;
+    ir.nodes = {make_input({2}, {1}), u};
+    ir.output_index = 1;
+    EXPECT_THROW(verify(ir), std::runtime_error);
+}
+
 TEST(Verify, RejectsWrongArity) {
     IR ir;
     Node add = make_add(0, 0, {2, 2}, {2, 1});
