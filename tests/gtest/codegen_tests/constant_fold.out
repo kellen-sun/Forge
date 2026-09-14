@@ -1,0 +1,5 @@
+op_0_const 1 1 1 1 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_0_const(device float* Out [[buffer(0)]],uint gid [[thread_position_in_grid]]){Out[gid]=5.000000000e+00f;}
