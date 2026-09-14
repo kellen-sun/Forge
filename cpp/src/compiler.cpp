@@ -191,16 +191,24 @@ void generateKernels(Graph& graph) {
                 const Node& src = graph.nodes[node.inputs[0]];
                 std::string name = "op_" + std::to_string(i) + "_sum";
                 body << "kernel void " << name
-                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
-                     << "uint gid [[thread_position_in_grid]]){";
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],";
                 if (node.args.size() == 1) {
                     const uint64_t in_numel = std::max<uint64_t>(numel_from_shape(src.shape), 1);
-                    body << "if(gid>0)return;float t=0;";
-                    body << "for(uint i=0;i<" << in_numel << "u;++i){";
+                    const uint64_t tg = std::min<uint64_t>(256, in_numel);
+                    body << "uint tid [[thread_index_in_threadgroup]],"
+                         << "uint simd_lane [[thread_index_in_simdgroup]],"
+                         << "uint simd_id [[simdgroup_index_in_threadgroup]],"
+                         << "uint tg_size [[threads_per_threadgroup]]){"
+                         << "threadgroup float scratch[32];float t=0;"
+                         << "for(uint i=tid;i<" << in_numel << "u;i+=tg_size){";
                     emit_linear_index(body, "idx", "i", src.shape, src.strides);
-                    body << "t+=A[idx];}Out[0]=t;}\n";
-                    graph.configs.push_back(dispatch_config(name, 1));
+                    body << "t+=A[idx];}t=simd_sum(t);if(simd_lane==0)scratch[simd_id]=t;"
+                         << "threadgroup_barrier(mem_flags::mem_threadgroup);if(tid==0){"
+                         << "float s=0;uint ns=(tg_size+31u)/32u;for(uint k=0;k<ns;++k)s+=scratch[k];"
+                         << "Out[0]=s;}}\n";
+                    graph.configs.push_back(dispatch_config(name, tg));
                 } else {
+                    body << "uint gid [[thread_position_in_grid]]){";
                     int64_t axis = node.args[0];
                     const int64_t rank = static_cast<int64_t>(src.shape.size());
                     if (axis < 0) axis += rank;
