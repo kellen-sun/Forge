@@ -87,6 +87,17 @@ static void emit_linear_index(std::ostringstream& src, const std::string& idx_na
     src << "}";
 }
 
+static bool is_layout_op(OpCode op) {
+    return op == OpCode::VIEW || op == OpCode::RESHAPE || op == OpCode::TRANSPOSE;
+}
+
+static int storage_root(const Graph& graph, int index) {
+    while (is_layout_op(graph.nodes[index].op)) {
+        index = graph.nodes[index].inputs[0];
+    }
+    return index;
+}
+
 static std::string f32_literal(float v) {
     std::ostringstream o;
     o.setf(std::ios::scientific);
@@ -249,6 +260,42 @@ void generateKernels(Graph& graph) {
                 emit_linear_index(body, "idx_a", "gid", node.shape, strides_s);
                 body << "Out[gid]=A[idx_a];}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
+            case OpCode::UPDATE: {
+                if (node.inputs.size() != 2 || node.args.size() < 1 ||
+                    (node.args.size() - 1) % 2 != 0) {
+                    throw std::runtime_error("generateKernels: UPDATE has invalid target metadata");
+                }
+                if (storage_root(graph, node.inputs[0]) == storage_root(graph, node.inputs[1])) {
+                    throw std::runtime_error(
+                        "generateKernels: UPDATE rejects potentially overlapping RHS and destination");
+                }
+                const size_t rank = (node.args.size() - 1) / 2;
+                std::vector<int64_t> target_shape(node.args.begin(), node.args.begin() + rank);
+                std::vector<int64_t> target_strides(node.args.begin() + rank,
+                                                    node.args.begin() + 2 * rank);
+                const int64_t target_offset = node.args.back();
+                const Node& rhs = graph.nodes[node.inputs[1]];
+                const auto rhs_strides =
+                    get_bcast_strides(rhs.shape, rhs.strides, target_shape);
+                const uint64_t target_numel = numel_from_shape(target_shape);
+                if (target_numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const int64_t target_delta = target_offset - node.offset;
+                const std::string name = "op_" + std::to_string(i) + "_update";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "const device float* B [[buffer(2)]],uint gid "
+                        "[[thread_position_in_grid]]){";
+                emit_linear_index(body, "idx_target", "gid", target_shape, target_strides);
+                emit_linear_index(body, "idx_rhs", "gid", target_shape, rhs_strides);
+                body << "Out[idx_target+" << target_delta << "L]=B[idx_rhs];}\n";
+                graph.configs.push_back(dispatch_config(name, target_numel));
                 any_kernel = true;
                 break;
             }
