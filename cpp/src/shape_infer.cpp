@@ -78,6 +78,7 @@ static const std::array<InferFn, kOpCount> kInfer = [] {
     t[static_cast<int>(OpCode::MUL)] = infer_binary;
     t[static_cast<int>(OpCode::DIV)] = infer_binary;
     t[static_cast<int>(OpCode::COPY)] = infer_copy;
+    t[static_cast<int>(OpCode::UNARY)] = infer_copy;
     t[static_cast<int>(OpCode::RESHAPE)] = infer_reshape;
     t[static_cast<int>(OpCode::UPDATE)] = infer_update;
     t[static_cast<int>(OpCode::MATMUL)] = infer_matmul;
