@@ -97,7 +97,9 @@ NULLARY_OPS = ["rand", "randn", "zeros"]
 for op_name in NULLARY_OPS:
     backend_fn = getattr(_backend, op_name)
 
-    def nullary_wrapper(*shape: Union[int, Sequence[int]], _fn=backend_fn) -> Array:
+    def nullary_wrapper(
+        *shape: Union[int, Sequence[int]], _fn=backend_fn, _op_name=op_name
+    ) -> Array:
         if len(shape) == 1:
             arg = shape[0]
             if isinstance(arg, int):
@@ -106,10 +108,15 @@ for op_name in NULLARY_OPS:
                 shape = list(arg)
         else:
             shape = list(shape)
-        if op_name == "zeros" and graph.CURRENT_GRAPH is not None:
+        if graph.CURRENT_GRAPH is not None:
+            traced_op = {
+                "zeros": Ops.ZEROS,
+                "rand": Ops.RAND,
+                "randn": Ops.RANDN,
+            }[_op_name]
             shape = tuple(shape)
             node = Node(
-                Ops.ZEROS,
+                traced_op,
                 [],
                 shape,
                 0,
