@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -39,7 +40,11 @@ static int identity_source(const IR& ir, const Node& node) {
 static std::string cse_key(const Node& node) {
     std::ostringstream key;
     key << static_cast<int>(node.op) << ':' << node.offset << ':';
-    for (int input : node.inputs) key << input << ',';
+    std::vector<int> inputs = node.inputs;
+    if ((node.op == OpCode::ADD || node.op == OpCode::MUL) && inputs.size() == 2) {
+        std::sort(inputs.begin(), inputs.end());
+    }
+    for (int input : inputs) key << input << ',';
     key << '|';
     for (int64_t arg : node.args) key << arg << ',';
     key << '|';
@@ -66,10 +71,25 @@ void CSEPass::run(IR& ir) {
         for (int& input : node.inputs) input = remap[input];
 
         if (is_pure_elementwise(node.op)) {
-            const int source = identity_source(ir, node);
-            if (source >= 0 && !mutated_roots.count(storage_root(ir.nodes, source))) {
-                remap[i] = source;
-                continue;
+            const bool node_mutated =
+                mutated_roots.count(storage_root(ir.nodes, i)) != 0;
+            if (!node_mutated) {
+                const bool zero_product =
+                    node.op == OpCode::MUL && node.inputs.size() == 2 &&
+                    (is_singleton_constant(ir, node.inputs[0], 0.0f) ||
+                     is_singleton_constant(ir, node.inputs[1], 0.0f));
+                if (zero_product) {
+                    node.op = OpCode::CONSTANT;
+                    node.inputs.clear();
+                    node.args = {encode_f32(0.0f)};
+                    continue;
+                }
+
+                const int source = identity_source(ir, node);
+                if (source >= 0 && !mutated_roots.count(storage_root(ir.nodes, source))) {
+                    remap[i] = source;
+                    continue;
+                }
             }
         }
 
