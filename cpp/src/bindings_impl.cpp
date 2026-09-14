@@ -81,6 +81,14 @@ std::vector<Node> parse_nodes(nb::list flat_nodes) {
                 throw std::runtime_error("CONSTANT node missing scalar value in args");
             }
             n.args.push_back(nb::cast<int64_t>(py_args[0]));
+        } else if (n.op == OpCode::SUM) {
+            // global: (keepdims,), axis: (axis, keepdims); keepdims is 0 or 1
+            if (py_args.size() != 1 && py_args.size() != 2) {
+                throw std::runtime_error("SUM node args must be (keepdims,) or (axis, keepdims)");
+            }
+            for (size_t i = 0; i < py_args.size(); ++i) {
+                n.args.push_back(nb::cast<int64_t>(py_args[i]));
+            }
         }
         nodes.push_back(n);
     }

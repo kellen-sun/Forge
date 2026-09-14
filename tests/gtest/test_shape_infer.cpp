@@ -58,6 +58,33 @@ TEST(ShapeInfer, IncompatibleBroadcastThrows) {
     EXPECT_THROW(ShapeInferPass{}.run(ir), std::runtime_error);
 }
 
+TEST(ShapeInfer, SumGlobalAndAxis) {
+    Node gsum;
+    gsum.op = OpCode::SUM;
+    gsum.inputs = {0};
+    gsum.args = {0};
+    gsum.offset = 0;
+
+    Node asize;
+    asize.op = OpCode::SUM;
+    asize.inputs = {0};
+    asize.args = {1, 1};
+    asize.offset = 0;
+
+    IR ir;
+    ir.nodes = {make_input({2, 3}, {3, 1}), gsum};
+    ir.output_index = 1;
+    ShapeInferPass{}.run(ir);
+    EXPECT_TRUE(ir.nodes[1].shape.empty());
+    EXPECT_TRUE(ir.nodes[1].strides.empty());
+
+    ir.nodes = {make_input({2, 3}, {3, 1}), asize};
+    ir.output_index = 1;
+    ShapeInferPass{}.run(ir);
+    EXPECT_EQ(ir.nodes[1].shape, (std::vector<int64_t>{2, 1}));
+    EXPECT_EQ(ir.nodes[1].strides, (std::vector<int64_t>{1, 1}));
+}
+
 TEST(ShapeInfer, PipelineStillAcceptsTracedShapes) {
     IR ir;
     ir.nodes = {

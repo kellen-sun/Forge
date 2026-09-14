@@ -12,6 +12,18 @@ def _default_strides(shape):
     return tuple(strides)
 
 
+def _normalize_sum_axis(shape, axis):
+    if not isinstance(axis, int):
+        raise TypeError("axis must be an integer or None")
+    if axis < 0:
+        axis += len(shape)
+    if axis < 0 or axis >= len(shape):
+        raise IndexError(
+            f"Array: Axis {axis} is out of bounds for Array of dimension {len(shape)}"
+        )
+    return axis
+
+
 def _deduce_new_shape(self, *shape: Union[int, Sequence[int]]):
     if len(shape) == 1:
         arg = shape[0]

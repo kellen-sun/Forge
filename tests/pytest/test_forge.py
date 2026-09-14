@@ -40,6 +40,42 @@ def test_forge_view():
     assert compiled.shape == eager.shape
 
 
+def test_forge_sum_global():
+    @forge
+    def f(x):
+        return x.sum()
+
+    x = Array([[1.0, 2.0], [3.0, 4.0]])
+    eager = x.sum()
+    compiled = f(x)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
+def test_forge_sum_axis_keepdims():
+    @forge
+    def f(x):
+        return x.sum(axis=1, keepdims=True)
+
+    x = Array([[1.0, 2.0], [3.0, 4.0]])
+    eager = x.sum(axis=1, keepdims=True)
+    compiled = f(x)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
+def test_forge_sum_axis():
+    @forge
+    def f(x):
+        return x.sum(axis=0)
+
+    x = Array([[1.0, 2.0], [3.0, 4.0]])
+    eager = x.sum(axis=0)
+    compiled = f(x)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_add_constant():
     @forge
     def f(x):

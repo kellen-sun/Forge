@@ -42,6 +42,21 @@ static void infer_update(IR& ir, int i) {
     node.strides = dest.strides;
 }
 
+static void infer_sum(IR& ir, int i) {
+    Node& node = ir.nodes[i];
+    const Node& src = operand(ir, node, 0);
+    if (node.args.empty()) {
+        throw std::runtime_error("shape-infer: SUM missing args at node " + std::to_string(i));
+    }
+    const bool keepdims = node.args.back() != 0;
+    if (node.args.size() == 1) {
+        node.shape = sum_output_shape(src.shape, keepdims);
+    } else {
+        node.shape = sum_output_shape(src.shape, node.args[0], keepdims);
+    }
+    node.strides = make_strides(node.shape);
+}
+
 static void infer_matmul(IR& ir, int i) {
     Node& node = ir.nodes[i];
     node.shape = matmul_output_shape(operand(ir, node, 0).shape, operand(ir, node, 1).shape);
@@ -66,6 +81,7 @@ static const std::array<InferFn, kOpCount> kInfer = [] {
     t[static_cast<int>(OpCode::RESHAPE)] = infer_reshape;
     t[static_cast<int>(OpCode::UPDATE)] = infer_update;
     t[static_cast<int>(OpCode::MATMUL)] = infer_matmul;
+    t[static_cast<int>(OpCode::SUM)] = infer_sum;
     return t;
 }();
 

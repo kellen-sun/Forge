@@ -1,0 +1,6 @@
+- 1 1 1 1 1 1
+op_1_sum 2 1 1 2 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_1_sum(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],uint gid [[thread_position_in_grid]]){long base=0;{uint remaining=gid;{uint c=remaining%2u;base+=long(c)*2L;remaining/=2u;}}float t=0;for(uint j=0;j<2u;++j)t+=A[base+long(j)*1L];Out[gid]=t;}

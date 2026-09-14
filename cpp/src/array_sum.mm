@@ -12,10 +12,7 @@ std::shared_ptr<ArrayHandle> sum_global(const std::shared_ptr<ArrayHandle>& A, b
         (__bridge_transfer id<MTLComputePipelineState>)get_pipeline("reduce_sum_global",
                                                                     METAL_SOURCE);
 
-    std::vector<int64_t> out_shape;
-    if (keepdims) {
-        out_shape = std::vector<int64_t>(A->shape().size(), 1);
-    }
+    auto out_shape = sum_output_shape(A->shape(), keepdims);
 
     auto out = std::make_shared<ArrayHandle>(out_shape, defaultForgeHandle->device_ptr());
 
@@ -71,12 +68,7 @@ std::shared_ptr<ArrayHandle> sum_axis(const std::shared_ptr<ArrayHandle>& A, siz
         (__bridge_transfer id<MTLComputePipelineState>)get_pipeline("reduce_sum_axis",
                                                                     METAL_SOURCE);
 
-    std::vector<int64_t> out_shape = A->shape();
-    if (keepdims) {
-        out_shape[axis] = 1;
-    } else {
-        out_shape.erase(out_shape.begin() + axis);
-    }
+    auto out_shape = sum_output_shape(A->shape(), static_cast<int64_t>(axis), keepdims);
 
     auto out = std::make_shared<ArrayHandle>(out_shape, defaultForgeHandle->device_ptr());
     uint out_numel = numel_from_shape(out_shape);
