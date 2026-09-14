@@ -5,6 +5,7 @@
 #include <string>
 
 #include "../include/array_handle.h"
+#include "../include/array_matmul.h"
 #include "../include/compiler.h"
 #include "../include/ir_utils.h"
 #include "../include/pass.h"
@@ -228,32 +229,14 @@ void generateKernels(Graph& graph) {
                 }
                 const Node& a = graph.nodes[node.inputs[0]];
                 const Node& b = graph.nodes[node.inputs[1]];
-                if (a.shape.size() < 1 || a.shape.size() > 2 || b.shape.size() < 1 ||
-                    b.shape.size() > 2 || node.shape.size() > 2) {
-                    throw std::runtime_error(
-                        "generateKernels: MATMUL supports vectors and 2D matrices only");
-                }
-                const bool a_vector = a.shape.size() == 1;
-                const bool b_vector = b.shape.size() == 1;
-                const uint64_t m =
-                    static_cast<uint64_t>(a_vector ? 1 : a.shape[0]);
-                const uint64_t n =
-                    static_cast<uint64_t>(b_vector ? 1 : b.shape[1]);
-                const uint64_t k = static_cast<uint64_t>(
-                    a_vector ? a.shape[0] : a.shape[1]);
-                const uint64_t b_k = static_cast<uint64_t>(
-                    b_vector ? b.shape[0] : b.shape[0]);
-                if (k != b_k) {
-                    throw std::runtime_error("generateKernels: MATMUL inner dimensions mismatch");
-                }
-                const int64_t a_row_stride = a_vector ? 0 : a.strides[0];
-                const int64_t a_col_stride = a_vector ? a.strides[0] : a.strides[1];
-                const int64_t b_row_stride = b.strides[0];
-                const int64_t b_col_stride = b_vector ? 0 : b.strides[1];
-                const size_t expected_output_rank = (a_vector && b_vector) ? 0 : 1 + (!a_vector && !b_vector);
-                if (node.shape.size() != expected_output_rank) {
+                const MatmulPlan plan =
+                    make_matmul_plan(a.shape, a.strides, b.shape, b.strides);
+                if (node.shape != plan.output_shape) {
                     throw std::runtime_error("generateKernels: MATMUL output shape mismatch");
                 }
+                const size_t batch_rank = plan.batch_shape.size();
+                const uint64_t tail_numel =
+                    static_cast<uint64_t>(plan.m * plan.n);
                 if (numel == 0) {
                     graph.configs.push_back(ghost_config());
                     break;
@@ -263,11 +246,29 @@ void generateKernels(Graph& graph) {
                      << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
                      << "const device float* B [[buffer(2)]],uint gid "
                         "[[thread_position_in_grid]]){"
-                     << "uint row=gid/"
-                     << n << "u;uint col=gid%" << n << "u;float total=0.0f;"
-                     << "for(uint kk=0;kk<" << k << "u;++kk)total+=A[long(row)*"
-                     << a_row_stride << "L+long(kk)*" << a_col_stride << "L]*B[long(kk)*"
-                     << b_row_stride << "L+long(col)*" << b_col_stride
+                     << "uint batch_index=gid/" << tail_numel
+                     << "u;uint remaining=batch_index;long base_a=0;long base_b=0;";
+                for (int d = static_cast<int>(batch_rank) - 1; d >= 0; --d) {
+                    body << "{uint coord=remaining%" << plan.batch_shape[static_cast<size_t>(d)]
+                         << "u;remaining/=" << plan.batch_shape[static_cast<size_t>(d)] << "u;";
+                    body << "base_a+=long(coord)*" << plan.a_batch_strides[static_cast<size_t>(d)]
+                         << "L;base_b+=long(coord)*"
+                         << plan.b_batch_strides[static_cast<size_t>(d)] << "L;";
+                    body << "}";
+                }
+                body << "uint tail_index=gid%" << tail_numel << "u;uint row=0;uint col=0;";
+                if (!plan.a_vector && !plan.b_vector) {
+                    body << "row=tail_index/" << plan.n << "u;col=tail_index%" << plan.n
+                         << "u;";
+                } else if (!plan.a_vector) {
+                    body << "row=tail_index;";
+                } else if (!plan.b_vector) {
+                    body << "col=tail_index;";
+                }
+                body << "float total=0.0f;for(uint kk=0;kk<" << plan.k
+                     << "u;++kk)total+=A[base_a+long(row)*" << plan.a_row_stride
+                     << "L+long(kk)*" << plan.a_col_stride << "L]*B[base_b+long(kk)*"
+                     << plan.b_row_stride << "L+long(col)*" << plan.b_col_stride
                      << "L];Out[gid]=total;}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;

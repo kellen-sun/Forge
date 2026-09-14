@@ -1,8 +1,75 @@
 #import <Metal/Metal.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 
+#include <algorithm>
+#include <stdexcept>
+
 #include "../include/array_matmul.h"
 #include "../include/metal_utils.h"
+
+MatmulPlan make_matmul_plan(const std::vector<int64_t>& a_shape,
+                            const std::vector<int64_t>& a_strides,
+                            const std::vector<int64_t>& b_shape,
+                            const std::vector<int64_t>& b_strides) {
+    if (a_shape.empty() || b_shape.empty() || a_shape.size() != a_strides.size() ||
+        b_shape.size() != b_strides.size()) {
+        throw std::runtime_error("matmul: invalid input rank/stride metadata");
+    }
+
+    MatmulPlan plan;
+    plan.a_vector = a_shape.size() == 1;
+    plan.b_vector = b_shape.size() == 1;
+    const size_t a_batch_rank = plan.a_vector ? 0 : a_shape.size() - 2;
+    const size_t b_batch_rank = plan.b_vector ? 0 : b_shape.size() - 2;
+    const size_t batch_rank = std::max(a_batch_rank, b_batch_rank);
+
+    plan.m = plan.a_vector ? 1 : a_shape[a_shape.size() - 2];
+    plan.k = plan.a_vector ? a_shape[0] : a_shape.back();
+    const int64_t b_k = plan.b_vector ? b_shape[0] : b_shape[b_shape.size() - 2];
+    plan.n = plan.b_vector ? 1 : b_shape.back();
+    if (plan.k != b_k) throw std::runtime_error("matmul: dimension mismatch");
+
+    plan.batch_shape = broadcast_shapes(
+        {a_shape.begin(), a_shape.begin() + a_batch_rank},
+        {b_shape.begin(), b_shape.begin() + b_batch_rank});
+
+    auto aligned_batch_strides = [&](const std::vector<int64_t>& shape,
+                                     const std::vector<int64_t>& strides,
+                                     size_t batch_dims) {
+        std::vector<int64_t> aligned;
+        aligned.reserve(batch_rank);
+        const int offset = static_cast<int>(batch_rank - batch_dims);
+        for (size_t i = 0; i < batch_rank; ++i) {
+            const int src = static_cast<int>(i) - offset;
+            if (src < 0 || shape[static_cast<size_t>(src)] == 1) {
+                aligned.push_back(0);
+            } else {
+                aligned.push_back(strides[static_cast<size_t>(src)]);
+            }
+        }
+        return aligned;
+    };
+    plan.a_batch_strides = aligned_batch_strides(a_shape, a_strides, a_batch_rank);
+    plan.b_batch_strides = aligned_batch_strides(b_shape, b_strides, b_batch_rank);
+
+    plan.a_row_stride = plan.a_vector ? 0 : a_strides[a_shape.size() - 2];
+    plan.a_col_stride = plan.a_vector ? a_strides[0] : a_strides.back();
+    plan.b_row_stride = plan.b_vector ? b_strides[0] : b_strides[b_shape.size() - 2];
+    plan.b_col_stride = plan.b_vector ? 0 : b_strides.back();
+
+    plan.output_shape = plan.batch_shape;
+    if (plan.a_vector && plan.b_vector) {
+        // Keep the scalar output rank zero.
+    } else if (plan.a_vector) {
+        plan.output_shape.push_back(plan.n);
+    } else if (plan.b_vector) {
+        plan.output_shape.push_back(plan.m);
+    } else {
+        plan.output_shape.push_back(plan.m);
+        plan.output_shape.push_back(plan.n);
+    }
+    return plan;
+}
 
 std::pair<std::shared_ptr<ArrayHandle>, bool> prepare(const std::shared_ptr<ArrayHandle>& h) {
     int ndim = h->shape().size();
@@ -22,6 +89,8 @@ std::pair<std::shared_ptr<ArrayHandle>, bool> prepare(const std::shared_ptr<Arra
 
 std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
                                           const std::shared_ptr<ArrayHandle>& B) {
+    const MatmulPlan plan =
+        make_matmul_plan(A->shape(), A->strides(), B->shape(), B->strides());
     bool squeeze_a = false, squeeze_b = false;
     auto Ashape = A->shape();
     auto Astrides = A->strides();
@@ -42,17 +111,12 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     auto [a, trans_a] = prepare(make_shared<ArrayHandle>(A, Ashape, Astrides, A->offset()));
     auto [b, trans_b] = prepare(make_shared<ArrayHandle>(B, Bshape, Bstrides, B->offset()));
 
-    int64_t M = a->shape()[a->shape().size() - 2];
-    int64_t K_a = a->shape()[a->shape().size() - 1];
-    int64_t K_b = b->shape()[b->shape().size() - 2];
-    int64_t N = b->shape()[b->shape().size() - 1];
-
-    if (K_a != K_b) throw std::runtime_error("matmul: dimension mismatch");
-    int64_t K = K_a;
+    int64_t M = plan.m;
+    int64_t K = plan.k;
+    int64_t N = plan.n;
 
     // Compute batch dimensions separately from M, N
-    auto batch_shape =
-        broadcast_shapes({Ashape.begin(), Ashape.end() - 2}, {Bshape.begin(), Bshape.end() - 2});
+    const auto& batch_shape = plan.batch_shape;
 
     // Build full output shape: batch_dims + M + N
     auto out_shape = batch_shape;
@@ -152,6 +216,6 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     [cmd commit];
     c->set_event(cmd);
 
-    auto final_shape = matmul_output_shape(A->shape(), B->shape());
-    return std::make_shared<ArrayHandle>(c, final_shape, make_strides(final_shape), c->offset());
+    return std::make_shared<ArrayHandle>(c, plan.output_shape, make_strides(plan.output_shape),
+                                         c->offset());
 }
