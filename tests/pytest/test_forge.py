@@ -137,6 +137,30 @@ def test_forge_random_factory_seed_progression(op_name):
     assert replay.list() == compiled.list()
 
 
+def test_forge_update_scalar_view():
+    @forge
+    def f(x):
+        x[1:] = 5.0
+        return x
+
+    x = Array([1.0, 2.0, 3.0, 4.0])
+    result = f(x)
+    assert result.list() == [1.0, 5.0, 5.0, 5.0]
+    assert x.list() == [1.0, 5.0, 5.0, 5.0]
+
+
+def test_forge_update_strided_view():
+    @forge
+    def f(x, value):
+        x[::2] = value
+        return x
+
+    x = Array([0.0, 1.0, 2.0, 3.0])
+    value = Array([10.0, 20.0])
+    result = f(x, value)
+    assert result.list() == [10.0, 1.0, 20.0, 3.0]
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):
