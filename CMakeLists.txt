@@ -31,6 +31,7 @@ add_library(forge_lib STATIC
     cpp/src/verify.cpp
     cpp/src/metal_utils.mm
     cpp/src/runtime.mm
+    cpp/src/shape_infer.cpp
 )
 
 target_link_libraries(forge_lib PUBLIC

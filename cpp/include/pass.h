@@ -24,6 +24,12 @@ class PassManager {
     std::vector<std::unique_ptr<Pass>> passes;
 };
 
+class ShapeInferPass : public Pass {
+   public:
+    const char* name() const override { return "shape-infer"; }
+    void run(IR& ir) override;
+};
+
 class CanonicalizePass : public Pass {
    public:
     const char* name() const override { return "canonicalize"; }
