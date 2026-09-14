@@ -70,3 +70,24 @@ TEST(CSE, DoesNotMergeValueThatIsLaterMutated) {
     EXPECT_EQ(ir.output_index, 2);
     EXPECT_NO_THROW(verify(ir));
 }
+
+TEST(CSE, AppliesFastMathCommutativityAndZeroProduct) {
+    Node zero = constant(0.0f);
+    IR ir;
+    ir.nodes = {
+        make_input({2}, {1}),
+        make_input({2}, {1}),
+        make_add(1, 0, {2}, {1}),
+        zero,
+        {OpCode::MUL, {0, 3}, {2}, {1}, 0, {}},
+    };
+    ir.output_index = 2;
+
+    CSEPass{}.run(ir);
+
+    EXPECT_EQ(ir.output_index, 2);
+    EXPECT_EQ(ir.nodes[2].inputs, (std::vector<int>{1, 0}));
+    EXPECT_EQ(ir.nodes[4].op, OpCode::CONSTANT);
+    EXPECT_FLOAT_EQ(decode_f32(ir.nodes[4].args[0]), 0.0f);
+    EXPECT_NO_THROW(verify(ir));
+}
