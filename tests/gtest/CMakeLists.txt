@@ -16,6 +16,7 @@ add_executable(forge_tests
     test_verify.cpp
     test_dce.cpp
     test_canonicalize.cpp
+    test_shape_infer.cpp
 )
 
 set_target_properties(forge_tests PROPERTIES
