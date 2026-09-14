@@ -3,7 +3,7 @@ from typing import Sequence, Union
 from . import graph
 from .graph import Node, Ops
 from .shape import _deduce_new_shape, _transpose_helper
-from .utils import _default_strides, _indexing_helper
+from .utils import _default_strides, _indexing_helper, _normalize_sum_axis
 
 
 def _broadcast_shapes(s1, s2):
@@ -166,3 +166,28 @@ class SymbolicArray:
     @property
     def T(self):
         return self.transpose()
+
+    def sum(self, axis=None, keepdims=False):
+        if axis is None:
+            out_shape = tuple(1 for _ in self.shape) if keepdims else ()
+            args = (int(keepdims),)
+        else:
+            axis = _normalize_sum_axis(self.shape, axis)
+            out_shape = list(self.shape)
+            if keepdims:
+                out_shape[axis] = 1
+            else:
+                out_shape.pop(axis)
+            out_shape = tuple(out_shape)
+            args = (int(axis), int(keepdims))
+        new_node = Node(
+            Ops.SUM,
+            [self.node],
+            out_shape,
+            0,
+            _default_strides(out_shape),
+            args=args,
+        )
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        return SymbolicArray(new_node)
