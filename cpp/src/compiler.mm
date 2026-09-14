@@ -5,6 +5,10 @@
 #include "../include/forge_handle.h"
 
 void compile_metal(Graph& graph) {
+    if (graph.shader_source.empty()) {
+        graph.pipelines.assign(graph.configs.size(), nullptr);
+        return;
+    }
     id<MTLDevice> device = (__bridge id<MTLDevice>)get_default_forge()->device_ptr();
     NSString* source = [NSString stringWithUTF8String:graph.shader_source.c_str()];
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];

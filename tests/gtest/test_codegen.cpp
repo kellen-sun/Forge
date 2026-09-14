@@ -1,0 +1,37 @@
+#include <gtest/gtest.h>
+
+#include <cstdlib>
+
+#include "../../cpp/include/compiler.h"
+#include "graph_io.h"
+
+#ifndef FORGE_GTEST_DIR
+#define FORGE_GTEST_DIR "../tests/gtest"
+#endif
+
+class CodegenGoldenTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(CodegenGoldenTest, MatchesGolden) {
+    std::string test_name = GetParam();
+    std::string dir = std::string(FORGE_GTEST_DIR) + "/codegen_tests/";
+    std::string in_path = dir + test_name + ".in";
+    std::string out_path = dir + test_name + ".out";
+
+    Graph g = parse_graph(in_path);
+    generateKernels(g);
+    std::string actual = dump_codegen(g);
+
+    if (std::getenv("UPDATE_GOLDENS")) {
+        std::ofstream out(out_path, std::ios::trunc);
+        if (!out) throw std::runtime_error("Failed to write golden: " + out_path);
+        out << actual;
+        return;
+    }
+
+    EXPECT_EQ(actual, read_file(out_path))
+        << "codegen golden mismatch in " << test_name
+        << " (rerun with UPDATE_GOLDENS=1 to rewrite)";
+}
+
+INSTANTIATE_TEST_SUITE_P(TestSuite, CodegenGoldenTest,
+                         ::testing::Values("identity", "add_2x2", "add_const", "view_add"));

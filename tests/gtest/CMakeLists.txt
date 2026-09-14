@@ -11,6 +11,8 @@ FetchContent_MakeAvailable(googletest)
 add_executable(forge_tests
     test_memory_arena.cpp
     test_array_helpers.cpp
+    test_constant_args.cpp
+    test_codegen.cpp
 )
 
 set_target_properties(forge_tests PROPERTIES
@@ -22,6 +24,10 @@ target_link_libraries(forge_tests
     PRIVATE
     forge_lib
     GTest::gtest_main
+)
+
+target_compile_definitions(forge_tests PRIVATE
+    FORGE_GTEST_DIR="${CMAKE_SOURCE_DIR}/tests/gtest"
 )
 
 include(GoogleTest)
