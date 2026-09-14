@@ -11,6 +11,7 @@ class Ops:
     UPDATE = 9
     CONSTANT = 10
     COPY = 11
+    SUM = 12
 
 
 class Node:
