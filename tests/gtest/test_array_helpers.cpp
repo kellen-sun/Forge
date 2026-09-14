@@ -37,3 +37,12 @@ TEST(ArrayHelpersTest, matmul_output_shape) {
     EXPECT_EQ(matmul_output_shape({5, 2, 3}, {3, 4}), (std::vector<int64_t>{5, 2, 4}));
     EXPECT_THROW(matmul_output_shape({2, 3}, {4, 5}), std::runtime_error);
 }
+
+TEST(ArrayHelpersTest, sum_output_shape) {
+    EXPECT_EQ(sum_output_shape({2, 3}, false), (std::vector<int64_t>{}));
+    EXPECT_EQ(sum_output_shape({2, 3}, true), (std::vector<int64_t>{1, 1}));
+    EXPECT_EQ(sum_output_shape({2, 3}, 1, false), (std::vector<int64_t>{2}));
+    EXPECT_EQ(sum_output_shape({2, 3}, 1, true), (std::vector<int64_t>{2, 1}));
+    EXPECT_EQ(sum_output_shape({2, 3}, -1, false), (std::vector<int64_t>{2}));
+    EXPECT_THROW(sum_output_shape({2, 3}, 2, false), std::runtime_error);
+}
