@@ -75,6 +75,21 @@ static const char* bin_name(OpCode op) {
     }
 }
 
+static const char* update_symbol(int64_t kind) {
+    switch (kind) {
+        case 1:
+            return "+";
+        case 2:
+            return "-";
+        case 3:
+            return "*";
+        case 4:
+            return "/";
+        default:
+            return nullptr;
+    }
+}
+
 static void emit_linear_index(std::ostringstream& src, const std::string& idx_name,
                               const std::string& linear, const std::vector<int64_t>& shape,
                               const std::vector<int64_t>& strides) {
@@ -255,20 +270,27 @@ void generateKernels(Graph& graph) {
             }
 
             case OpCode::UPDATE: {
-                if (node.inputs.size() != 2 || node.args.size() < 1 ||
-                    (node.args.size() - 1) % 2 != 0) {
+                if (node.inputs.size() != 2 || node.args.size() < 1) {
                     throw std::runtime_error("generateKernels: UPDATE has invalid target metadata");
+                }
+                const size_t metadata_size = node.args.size() - 1;
+                if (metadata_size < 1 || (metadata_size - 1) % 2 != 0) {
+                    throw std::runtime_error("generateKernels: UPDATE has invalid target metadata");
+                }
+                const int64_t kind = node.args.back();
+                if (kind < 0 || kind > 4) {
+                    throw std::runtime_error("generateKernels: UPDATE has unknown operation kind");
                 }
                 if (storage_root(graph.nodes, node.inputs[0]) ==
                     storage_root(graph.nodes, node.inputs[1])) {
                     throw std::runtime_error(
                         "generateKernels: UPDATE rejects potentially overlapping RHS and destination");
                 }
-                const size_t rank = (node.args.size() - 1) / 2;
+                const size_t rank = (metadata_size - 1) / 2;
                 std::vector<int64_t> target_shape(node.args.begin(), node.args.begin() + rank);
                 std::vector<int64_t> target_strides(node.args.begin() + rank,
                                                     node.args.begin() + 2 * rank);
-                const int64_t target_offset = node.args.back();
+                const int64_t target_offset = node.args[metadata_size - 1];
                 const Node& rhs = graph.nodes[node.inputs[1]];
                 const auto rhs_strides =
                     get_bcast_strides(rhs.shape, rhs.strides, target_shape);
@@ -285,7 +307,13 @@ void generateKernels(Graph& graph) {
                         "[[thread_position_in_grid]]){";
                 emit_linear_index(body, "idx_target", "gid", target_shape, target_strides);
                 emit_linear_index(body, "idx_rhs", "gid", target_shape, rhs_strides);
-                body << "Out[idx_target+" << target_delta << "L]=B[idx_rhs];}\n";
+                body << "Out[idx_target+" << target_delta << "L]=";
+                if (kind == 0) {
+                    body << "B[idx_rhs];}\n";
+                } else {
+                    body << "Out[idx_target+" << target_delta << "L]"
+                         << update_symbol(kind) << "B[idx_rhs];}\n";
+                }
                 graph.configs.push_back(dispatch_config(name, target_numel));
                 any_kernel = true;
                 break;
