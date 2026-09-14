@@ -35,6 +35,7 @@ Currently this covers:
 - `zeros`
 - random factories: `rand` and `randn` (with runtime seed progression)
 - indexed assignment inside `@forge`: `x[key] = value` for scalar or matching-shape, non-overlapping RHS
+- arithmetic assignment inside `@forge`: `+=`, `-=`, `*=`, `/=`
 
-Not yet compiled: matmul (`@`) and in-place arithmetic (`+=`, `-=`, `*=`, `/=`)
+Not yet compiled: matmul (`@`)
 
