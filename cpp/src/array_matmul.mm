@@ -152,20 +152,6 @@ std::shared_ptr<ArrayHandle> array_matmul(const std::shared_ptr<ArrayHandle>& A,
     [cmd commit];
     c->set_event(cmd);
 
-    std::vector<int64_t> final_shape = c->shape();
-    if (squeeze_a && squeeze_b) {
-        // Case: (K,) @ (K,) -> Scalar. Current c: (..., 1, 1). Remove last two dims.
-        if (final_shape.size() >= 2) {
-            final_shape.resize(final_shape.size() - 2);
-        }
-    } else if (squeeze_a) {
-        // Case: (K,) @ (K, N) -> (N,). Current c: (..., 1, N). Remove dim -2.
-        auto it = final_shape.end() - 2;
-        final_shape.erase(it);
-    } else if (squeeze_b) {
-        // Case: (M, K) @ (K,) -> (M,). Current c: (..., M, 1). Remove dim -1.
-        final_shape.pop_back();
-    }
-
+    auto final_shape = matmul_output_shape(A->shape(), B->shape());
     return std::make_shared<ArrayHandle>(c, final_shape, make_strides(final_shape), c->offset());
 }

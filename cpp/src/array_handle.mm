@@ -183,6 +183,37 @@ std::vector<int64_t> broadcast_shapes(std::span<const int64_t>&& a_shape,
     return out;
 }
 
+std::vector<int64_t> matmul_output_shape(const std::vector<int64_t>& a_shape,
+                                         const std::vector<int64_t>& b_shape) {
+    auto a = a_shape;
+    auto b = b_shape;
+    const bool squeeze_a = a.size() == 1;
+    const bool squeeze_b = b.size() == 1;
+    if (squeeze_a) a.insert(a.begin(), 1);
+    if (squeeze_b) b.push_back(1);
+    if (a.size() < 2 || b.size() < 2) {
+        throw std::runtime_error("matmul: needs at least 1D operands");
+    }
+    const int64_t M = a[a.size() - 2];
+    const int64_t K_a = a.back();
+    const int64_t K_b = b[b.size() - 2];
+    const int64_t N = b.back();
+    if (K_a != K_b) throw std::runtime_error("matmul: dimension mismatch");
+
+    auto out = broadcast_shapes(std::vector<int64_t>(a.begin(), a.end() - 2),
+                                std::vector<int64_t>(b.begin(), b.end() - 2));
+    out.push_back(M);
+    out.push_back(N);
+    if (squeeze_a && squeeze_b) {
+        if (out.size() >= 2) out.resize(out.size() - 2);
+    } else if (squeeze_a) {
+        out.erase(out.end() - 2);
+    } else if (squeeze_b) {
+        out.pop_back();
+    }
+    return out;
+}
+
 std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
                                        const std::vector<int64_t>& strides,
                                        const std::vector<int64_t>& final_shape) {
