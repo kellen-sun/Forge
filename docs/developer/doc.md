@@ -69,6 +69,9 @@ Run:
 ```
 Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
 
+``UNARY_OPS`` in ``py/Forge/ops.py`` must match ``kUnaryNames`` in ``cpp/include/common.h`` (same names, same order). Gtest ``Codegen.UnaryOpsPythonMatchesCommonH`` checks this in CI.
+
+
 ##### Codegen goldens
 ``generateKernels`` is checked by file tests under ``tests/gtest/codegen_tests/`` (same graph ``.in`` format as the memory-arena tests). The ``.out`` files store dispatch configs plus compact MSL (one kernel per line). Tests compare that compact text byte-for-byte.
 

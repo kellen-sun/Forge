@@ -85,6 +85,24 @@ TEST(ShapeInfer, SumGlobalAndAxis) {
     EXPECT_EQ(ir.nodes[1].strides, (std::vector<int64_t>{1, 1}));
 }
 
+TEST(ShapeInfer, UnaryMatchesCopyLayout) {
+    Node u;
+    u.op = OpCode::UNARY;
+    u.inputs = {0};
+    u.args = {0};
+    u.shape = {99};
+    u.strides = {1};
+    u.offset = 0;
+
+    IR ir;
+    ir.nodes = {make_input({2, 3}, {1, 2}), u};
+    ir.output_index = 1;
+    ShapeInferPass{}.run(ir);
+    EXPECT_EQ(ir.nodes[1].shape, (std::vector<int64_t>{2, 3}));
+    EXPECT_EQ(ir.nodes[1].strides, (std::vector<int64_t>{3, 1}));
+    EXPECT_NO_THROW(verify(ir));
+}
+
 TEST(ShapeInfer, PipelineStillAcceptsTracedShapes) {
     IR ir;
     ir.nodes = {

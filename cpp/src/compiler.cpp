@@ -159,6 +159,32 @@ void generateKernels(Graph& graph) {
                 break;
             }
 
+            case OpCode::UNARY: {
+                if (node.inputs.size() != 1 || node.args.empty()) {
+                    throw std::runtime_error("generateKernels: UNARY expects 1 input and kind");
+                }
+                const int64_t kind = node.args[0];
+                if (kind < 0 || kind >= kUnaryCount) {
+                    throw std::runtime_error("generateKernels: unknown UNARY kind");
+                }
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const Node& src = graph.nodes[node.inputs[0]];
+                auto strides_s = get_bcast_strides(src.shape, src.strides, node.shape);
+                const char* uname = kUnaryNames[kind];
+                std::string name = "op_" + std::to_string(i) + "_" + uname;
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "uint gid [[thread_position_in_grid]]){";
+                emit_linear_index(body, "idx_a", "gid", node.shape, strides_s);
+                body << "Out[gid]=" << uname << "(A[idx_a]);}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
             case OpCode::COPY: {
                 if (node.inputs.size() != 1) {
                     throw std::runtime_error("generateKernels: COPY expects 1 input");

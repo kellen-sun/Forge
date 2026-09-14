@@ -13,6 +13,7 @@ static int expected_arity(OpCode op) {
         case OpCode::VIEW:
         case OpCode::COPY:
         case OpCode::SUM:
+        case OpCode::UNARY:
             return 1;
         case OpCode::MATMUL:
         case OpCode::ADD:
@@ -55,6 +56,17 @@ void verify(const IR& ir) {
         }
         if (node.op == OpCode::SUM && node.args.empty()) {
             throw std::runtime_error("verify: SUM node " + std::to_string(i) + " missing args");
+        }
+        if (node.op == OpCode::UNARY) {
+            if (node.args.empty()) {
+                throw std::runtime_error("verify: UNARY node " + std::to_string(i) +
+                                         " missing kind");
+            }
+            const int64_t kind = node.args[0];
+            if (kind < 0 || kind >= kUnaryCount) {
+                throw std::runtime_error("verify: UNARY node " + std::to_string(i) +
+                                         " has unknown kind");
+            }
         }
         for (int inp : node.inputs) {
             if (inp < 0 || inp >= n) {

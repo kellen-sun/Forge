@@ -40,14 +40,32 @@ class SymbolicArray:
     def __add__(self, other):
         return self._binary_op(Ops.ADD, other)
 
+    def __radd__(self, other):
+        return _lift(other)._binary_op(Ops.ADD, self)
+
     def __sub__(self, other):
         return self._binary_op(Ops.SUB, other)
+
+    def __rsub__(self, other):
+        return _lift(other)._binary_op(Ops.SUB, self)
 
     def __mul__(self, other):
         return self._binary_op(Ops.MUL, other)
 
+    def __rmul__(self, other):
+        return _lift(other)._binary_op(Ops.MUL, self)
+
     def __truediv__(self, other):
         return self._binary_op(Ops.DIV, other)
+
+    def __rtruediv__(self, other):
+        return _lift(other)._binary_op(Ops.DIV, self)
+
+    def __pos__(self):
+        return self
+
+    def __neg__(self):
+        return _lift(0) - self
 
     def __matmul__(self, other):
         other = _lift(other)
@@ -91,6 +109,19 @@ class SymbolicArray:
             out_shape,
             0,
             _default_strides(out_shape),
+        )
+        if graph.CURRENT_GRAPH:
+            graph.CURRENT_GRAPH.add(new_node)
+        return SymbolicArray(new_node)
+
+    def _unary(self, kind: int):
+        new_node = Node(
+            Ops.UNARY,
+            [self.node],
+            self.shape,
+            0,
+            _default_strides(self.shape),
+            args=(int(kind),),
         )
         if graph.CURRENT_GRAPH:
             graph.CURRENT_GRAPH.add(new_node)

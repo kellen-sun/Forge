@@ -89,6 +89,12 @@ std::vector<Node> parse_nodes(nb::list flat_nodes) {
             for (size_t i = 0; i < py_args.size(); ++i) {
                 n.args.push_back(nb::cast<int64_t>(py_args[i]));
             }
+        } else if (n.op == OpCode::UNARY) {
+            // py_args = (kind,) matching kUnaryNames / UNARY_OPS
+            if (py_args.size() != 1) {
+                throw std::runtime_error("UNARY node args must be (kind,)");
+            }
+            n.args.push_back(nb::cast<int64_t>(py_args[0]));
         }
         nodes.push_back(n);
     }
