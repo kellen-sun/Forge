@@ -11,7 +11,8 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
     for (size_t idx = 0; idx < num_nodes; ++idx) {
         OpCode op = graph.nodes[idx].op;
         roots[idx] = idx;
-        if (op == OpCode::RESHAPE || op == OpCode::TRANSPOSE || op == OpCode::VIEW) {
+        if (op == OpCode::RESHAPE || op == OpCode::TRANSPOSE || op == OpCode::VIEW ||
+            op == OpCode::UPDATE) {
             int parent = graph.nodes[idx].inputs[0];
             roots[idx] = roots[parent];
         }
