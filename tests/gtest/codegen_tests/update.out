@@ -1,0 +1,8 @@
+- 1 1 1 1 1 1
+op_1_const 1 1 1 1 1 1
+op_2_update 3 1 1 3 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_1_const(device float* Out [[buffer(0)]],uint gid [[thread_position_in_grid]]){Out[gid]=5.000000000e+00f;}
+kernel void op_2_update(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){long idx_target=0;{uint remaining=gid;{uint c=remaining%3u;idx_target+=long(c)*1L;remaining/=3u;}{uint c=remaining%1u;idx_target+=long(c)*3L;remaining/=1u;}}long idx_rhs=0;{uint remaining=gid;{uint c=remaining%3u;idx_rhs+=long(c)*0L;remaining/=3u;}{uint c=remaining%1u;idx_rhs+=long(c)*0L;remaining/=1u;}}Out[idx_target+3L]=B[idx_rhs];}

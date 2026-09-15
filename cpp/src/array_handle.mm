@@ -239,6 +239,10 @@ std::vector<int64_t> get_bcast_strides(const std::vector<int64_t>& shape,
                                        const std::vector<int64_t>& strides,
                                        const std::vector<int64_t>& final_shape) {
     std::vector<int64_t> bcast_strides(final_shape.size(), 0);
+    if (numel_from_shape(shape) == 1) return bcast_strides;
+    if (shape.size() > final_shape.size()) {
+        throw std::runtime_error("broadcast: input rank exceeds output rank");
+    }
     int offset = final_shape.size() - shape.size();
 
     for (size_t i = 0; i < shape.size(); ++i) {

@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "../include/ir_utils.h"
 #include "../include/pass.h"
 
 void DCEPass::run(IR& ir) {
@@ -8,6 +9,14 @@ void DCEPass::run(IR& ir) {
     std::vector<char> live(n, 0);
 
     std::vector<int> stack = {ir.output_index};
+    // An UPDATE to an INPUT mutates caller-visible storage, so it
+    // remains live even if its result is not used
+    for (int i = 0; i < n; ++i) {
+        if (ir.nodes[i].op == OpCode::UPDATE && !ir.nodes[i].inputs.empty()) {
+            const int root = storage_root(ir.nodes, ir.nodes[i].inputs[0]);
+            if (root >= 0 && ir.nodes[root].op == OpCode::INPUT) stack.push_back(i);
+        }
+    }
     while (!stack.empty()) {
         int i = stack.back();
         stack.pop_back();

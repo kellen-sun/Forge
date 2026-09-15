@@ -1,4 +1,5 @@
 #include "../include/memory_arena.h"
+#include "../include/ir_utils.h"
 
 MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
     // 1. Calculate array sizes and find roots of each array
@@ -9,12 +10,7 @@ MemoryArena::MemoryArena(const Graph& graph, uint64_t element_size) {
     this->roots.resize(num_nodes);
 
     for (size_t idx = 0; idx < num_nodes; ++idx) {
-        OpCode op = graph.nodes[idx].op;
-        roots[idx] = idx;
-        if (op == OpCode::RESHAPE || op == OpCode::TRANSPOSE || op == OpCode::VIEW) {
-            int parent = graph.nodes[idx].inputs[0];
-            roots[idx] = roots[parent];
-        }
+        roots[idx] = storage_root(graph.nodes, static_cast<int>(idx));
 
         sizes[idx] = element_size * numel_from_shape(graph.nodes[idx].shape);
     }

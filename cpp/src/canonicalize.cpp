@@ -1,8 +1,5 @@
+#include "../include/ir_utils.h"
 #include "../include/pass.h"
-
-static bool is_layout_op(OpCode op) {
-    return op == OpCode::VIEW || op == OpCode::RESHAPE || op == OpCode::TRANSPOSE;
-}
 
 static bool is_identity_layout(const Node& node, const Node& src) {
     return is_layout_op(node.op) && node.inputs.size() == 1 && node.shape == src.shape &&

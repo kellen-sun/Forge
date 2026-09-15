@@ -14,6 +14,7 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     bool used_random = false;
     id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    std::vector<std::shared_ptr<ArrayHandle>> mutated_inputs;
 
     // a) Allocate the memory plan needed
     // i. allocate the arena
@@ -62,6 +63,12 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
 
         id<MTLComputePipelineState> pso = (__bridge id<MTLComputePipelineState>)raw_ptr;
         [computeEncoder setComputePipelineState:pso];
+        if (node.op == OpCode::UPDATE) {
+            int root = this->arena->get_root(i);
+            if (this->nodes[root].op == OpCode::INPUT) {
+                mutated_inputs.push_back(inputs[root]);
+            }
+        }
         // b) Set the correct buffer inputs
         id<MTLBuffer> dest_buf = get_metal_buffer_for_node(i);
         uint64_t dest_offset = this->arena->get_offset(i) + (node.offset * sizeof(float));
@@ -95,5 +102,6 @@ std::shared_ptr<ArrayHandle> Graph::execute(std::vector<std::shared_ptr<ArrayHan
     [commandBuffer commit];
     if (used_random) defaultForgeHandle->set_seed(random_seed);
     output_handle->set_event(commandBuffer);
+    for (const auto& input : mutated_inputs) input->set_event(commandBuffer);
     return output_handle;
 }

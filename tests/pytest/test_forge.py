@@ -137,6 +137,92 @@ def test_forge_random_factory_seed_progression(op_name):
     assert replay.list() == compiled.list()
 
 
+def test_forge_update_scalar_view():
+    @forge
+    def f(x):
+        x[1:] = 5.0
+        return x
+
+    x = Array([1.0, 2.0, 3.0, 4.0])
+    result = f(x)
+    assert result.list() == [1.0, 5.0, 5.0, 5.0]
+    assert x.list() == [1.0, 5.0, 5.0, 5.0]
+
+
+def test_forge_update_strided_view():
+    @forge
+    def f(x, value):
+        x[::2] = value
+        return x
+
+    x = Array([0.0, 1.0, 2.0, 3.0])
+    value = Array([10.0, 20.0])
+    result = f(x, value)
+    assert result.list() == [10.0, 1.0, 20.0, 3.0]
+
+
+def test_forge_update_input_side_effect_when_not_returned():
+    @forge
+    def f(x, y):
+        x[0] = 7.0
+        return y
+
+    x = Array([1.0, 2.0])
+    y = Array([9.0])
+    result = f(x, y)
+    assert result.list() == [9.0]
+    assert x.list() == [7.0, 2.0]
+
+
+def test_forge_updates_execute_in_order():
+    @forge
+    def f(x):
+        x[:] = 3.0
+        x[1] = 4.0
+        return x
+
+    x = Array([0.0, 0.0, 0.0])
+    assert f(x).list() == [3.0, 4.0, 3.0]
+
+
+def test_forge_update_rejects_overlapping_rhs():
+    @forge
+    def f(x):
+        x[1:] = x[:-1]
+        return x
+
+    with pytest.raises(RuntimeError, match="overlapping"):
+        f(Array([1.0, 2.0, 3.0]))
+
+
+@pytest.mark.parametrize(
+    ("op_name", "expected"),
+    [
+        ("iadd", [4.0, 6.0]),
+        ("isub", [-2.0, -2.0]),
+        ("imul", [3.0, 8.0]),
+        ("idiv", [1.0 / 3.0, 0.5]),
+    ],
+)
+def test_forge_arithmetic_update(op_name, expected):
+    @forge
+    def f(x, value):
+        if op_name == "iadd":
+            x += value
+        elif op_name == "isub":
+            x -= value
+        elif op_name == "imul":
+            x *= value
+        else:
+            x /= value
+        return x
+
+    x = Array([1.0, 2.0])
+    value = Array([3.0, 4.0])
+    result = f(x, value)
+    assert result.list() == pytest.approx(expected, rel=1e-6)
+
+
 def test_forge_reverse_mul_and_neg():
     @forge
     def f(x):

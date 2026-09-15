@@ -135,19 +135,40 @@ class SymbolicArray:
         return SymbolicArray(new_node)
 
     def __setitem__(self, key, value):
+        self._update(value, key, 0)
+
+    def _update(self, value, key, kind):
         value = _lift(value)
         new_shape, new_strides, new_offset = _indexing_helper(self, key)
+        if kind != 0 and _broadcast_shapes(value.shape, self.shape) != self.shape:
+            raise ValueError("in-place update: operands could not be broadcast to destination shape")
         new_node = Node(
             Ops.UPDATE,
             [self.node, value.node],
             self.shape,
             self.offset,
             self.strides,
-            args=(new_shape, new_strides, new_offset),
+            args=(new_shape, new_strides, new_offset, int(kind)),
         )
         if graph.CURRENT_GRAPH:
             graph.CURRENT_GRAPH.add(new_node)
         self.node = new_node
+
+    def __iadd__(self, other):
+        self._update(other, (slice(None),) * len(self.shape), 1)
+        return self
+
+    def __isub__(self, other):
+        self._update(other, (slice(None),) * len(self.shape), 2)
+        return self
+
+    def __imul__(self, other):
+        self._update(other, (slice(None),) * len(self.shape), 3)
+        return self
+
+    def __itruediv__(self, other):
+        self._update(other, (slice(None),) * len(self.shape), 4)
+        return self
 
     def reshape(self, *shape: Union[int, Sequence[int]]):
         new_shape = _deduce_new_shape(self, *shape)
