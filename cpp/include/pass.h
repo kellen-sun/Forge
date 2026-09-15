@@ -36,6 +36,12 @@ class CanonicalizePass : public Pass {
     void run(IR& ir) override;
 };
 
+class ConstantFoldPass : public Pass {
+   public:
+    const char* name() const override { return "constant-fold"; }
+    void run(IR& ir) override;
+};
+
 class DCEPass : public Pass {
    public:
     const char* name() const override { return "dce"; }
