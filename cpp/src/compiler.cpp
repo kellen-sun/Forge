@@ -5,6 +5,7 @@
 #include <string>
 
 #include "../include/array_handle.h"
+#include "../include/array_matmul.h"
 #include "../include/compiler.h"
 #include "../include/ir_utils.h"
 #include "../include/pass.h"
@@ -217,6 +218,58 @@ void generateKernels(Graph& graph) {
                 emit_linear_index(body, "idx_a", "gid", node.shape, strides_a);
                 emit_linear_index(body, "idx_b", "gid", node.shape, strides_b);
                 body << "Out[gid]=A[idx_a]" << bin_symbol(node.op) << "B[idx_b];}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
+            case OpCode::MATMUL: {
+                if (node.inputs.size() != 2) {
+                    throw std::runtime_error("generateKernels: MATMUL expects 2 inputs");
+                }
+                const Node& a = graph.nodes[node.inputs[0]];
+                const Node& b = graph.nodes[node.inputs[1]];
+                const MatmulPlan plan =
+                    make_matmul_plan(a.shape, a.strides, b.shape, b.strides);
+                if (node.shape != plan.output_shape) {
+                    throw std::runtime_error("generateKernels: MATMUL output shape mismatch");
+                }
+                const size_t batch_rank = plan.batch_shape.size();
+                const uint64_t tail_numel =
+                    static_cast<uint64_t>(plan.m * plan.n);
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const std::string name = "op_" + std::to_string(i) + "_matmul";
+                body << "kernel void " << name
+                     << "(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],"
+                     << "const device float* B [[buffer(2)]],uint gid "
+                        "[[thread_position_in_grid]]){"
+                     << "uint batch_index=gid/" << tail_numel
+                     << "u;uint remaining=batch_index;long base_a=0;long base_b=0;";
+                for (int d = static_cast<int>(batch_rank) - 1; d >= 0; --d) {
+                    body << "{uint coord=remaining%" << plan.batch_shape[static_cast<size_t>(d)]
+                         << "u;remaining/=" << plan.batch_shape[static_cast<size_t>(d)] << "u;";
+                    body << "base_a+=long(coord)*" << plan.a_batch_strides[static_cast<size_t>(d)]
+                         << "L;base_b+=long(coord)*"
+                         << plan.b_batch_strides[static_cast<size_t>(d)] << "L;";
+                    body << "}";
+                }
+                body << "uint tail_index=gid%" << tail_numel << "u;uint row=0;uint col=0;";
+                if (!plan.a_vector && !plan.b_vector) {
+                    body << "row=tail_index/" << plan.n << "u;col=tail_index%" << plan.n
+                         << "u;";
+                } else if (!plan.a_vector) {
+                    body << "row=tail_index;";
+                } else if (!plan.b_vector) {
+                    body << "col=tail_index;";
+                }
+                body << "float total=0.0f;for(uint kk=0;kk<" << plan.k
+                     << "u;++kk)total+=A[base_a+long(row)*" << plan.a_row_stride
+                     << "L+long(kk)*" << plan.a_col_stride << "L]*B[base_b+long(kk)*"
+                     << plan.b_row_stride << "L+long(col)*" << plan.b_col_stride
+                     << "L];Out[gid]=total;}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;

@@ -1,0 +1,7 @@
+- 1 1 1 1 1 1
+- 1 1 1 1 1 1
+op_2_matmul 2 1 1 2 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_2_matmul(device float* Out [[buffer(0)]],const device float* A [[buffer(1)]],const device float* B [[buffer(2)]],uint gid [[thread_position_in_grid]]){uint batch_index=gid/2u;uint remaining=batch_index;long base_a=0;long base_b=0;uint tail_index=gid%2u;uint row=0;uint col=0;row=tail_index;float total=0.0f;for(uint kk=0;kk<3u;++kk)total+=A[base_a+long(row)*3L+long(kk)*1L]*B[base_b+long(kk)*1L+long(col)*0L];Out[gid]=total;}
