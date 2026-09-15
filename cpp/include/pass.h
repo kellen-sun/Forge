@@ -42,6 +42,12 @@ class ConstantFoldPass : public Pass {
     void run(IR& ir) override;
 };
 
+class CSEPass : public Pass {
+   public:
+    const char* name() const override { return "cse"; }
+    void run(IR& ir) override;
+};
+
 class DCEPass : public Pass {
    public:
     const char* name() const override { return "dce"; }

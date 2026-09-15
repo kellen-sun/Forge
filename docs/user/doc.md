@@ -38,5 +38,10 @@ Currently this covers:
 - arithmetic assignment inside `@forge`: `+=`, `-=`, `*=`, `/=`
 - vector and 2D matrix multiplication inside `@forge`, including transposed 2D inputs
 
+The compiled path (`@forge`) uses graph optimizations for pure elementwise graphs: constant
+folding, common subexpression elimination including commutative `+`/`*`, rewrites such
+as `x + 0`, `x - 0`, `x * 1`, `x / 1`, and `x * 0`. Eager operations remain op-by-op. Consequently,
+compiled edge cases such as NaN, infinity, and signed zero might be slightly off compared to strict IEEE.
+
 Not yet compiled: tiled matmul optimization
 

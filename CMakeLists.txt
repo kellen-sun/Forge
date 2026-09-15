@@ -24,6 +24,7 @@ add_library(forge_lib STATIC
     cpp/src/canonicalize.cpp
     cpp/src/constant_fold.cpp
     cpp/src/compiler.cpp
+    cpp/src/cse.cpp
     cpp/src/compiler.mm
     cpp/src/dce.cpp
     cpp/src/forge_handle.mm
