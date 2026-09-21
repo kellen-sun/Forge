@@ -48,6 +48,12 @@ class CSEPass : public Pass {
     void run(IR& ir) override;
 };
 
+class ElementwiseFusionPass : public Pass {
+   public:
+    const char* name() const override { return "elementwise-fusion"; }
+    void run(IR& ir) override;
+};
+
 class DCEPass : public Pass {
    public:
     const char* name() const override { return "dce"; }
