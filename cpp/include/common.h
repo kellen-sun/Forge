@@ -18,6 +18,7 @@ enum class OpCode : int {
     ZEROS = 14,
     RAND = 15,
     RANDN = 16,
+    FUSED_ELEMENTWISE = 17,
     // Add new ops before COUNT which is a sentinel for the number of opcodes
     COUNT
 };
