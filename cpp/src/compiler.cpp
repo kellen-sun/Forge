@@ -7,6 +7,7 @@
 #include "../include/array_handle.h"
 #include "../include/array_matmul.h"
 #include "../include/compiler.h"
+#include "../include/fused_elementwise.h"
 #include "../include/ir_utils.h"
 #include "../include/pass.h"
 
@@ -16,6 +17,7 @@ void optimize_graph(IR& ir) {
     pm.addPass(std::make_unique<CanonicalizePass>());
     pm.addPass(std::make_unique<ConstantFoldPass>());
     pm.addPass(std::make_unique<CSEPass>());
+    pm.addPass(std::make_unique<ElementwiseFusionPass>());
     pm.addPass(std::make_unique<DCEPass>());
     pm.run(ir);
 }
@@ -298,6 +300,78 @@ void generateKernels(Graph& graph) {
                      << "uint gid [[thread_position_in_grid]]){";
                 emit_linear_index(body, "idx_a", "gid", node.shape, strides_s);
                 body << "Out[gid]=" << uname << "(A[idx_a]);}\n";
+                graph.configs.push_back(dispatch_config(name, numel));
+                any_kernel = true;
+                break;
+            }
+
+            case OpCode::FUSED_ELEMENTWISE: {
+                if (node.args.size() < kFusedHeaderSize ||
+                    node.args[0] != kFusedEncodingVersion || node.args[1] < 1 ||
+                    node.args.size() !=
+                        kFusedHeaderSize +
+                            static_cast<size_t>(node.args[1]) * kFusedInstructionWidth) {
+                    throw std::runtime_error(
+                        "generateKernels: malformed FUSED_ELEMENTWISE encoding");
+                }
+                if (numel == 0) {
+                    graph.configs.push_back(ghost_config());
+                    break;
+                }
+                const size_t instruction_count = static_cast<size_t>(node.args[1]);
+                const std::string name = "op_" + std::to_string(i) + "_fused";
+                body << "kernel void " << name << "(device float* Out [[buffer(0)]],";
+                for (size_t input = 0; input < node.inputs.size(); ++input) {
+                    if (input != 0) body << ',';
+                    body << "const device float* A" << input << " [[buffer(" << input + 1
+                         << ")]]";
+                }
+                body << ",uint gid [[thread_position_in_grid]]){";
+                for (size_t input = 0; input < node.inputs.size(); ++input) {
+                    const Node& leaf = graph.nodes[node.inputs[input]];
+                    const auto leaf_strides =
+                        get_bcast_strides(leaf.shape, leaf.strides, node.shape);
+                    emit_linear_index(body, "idx_" + std::to_string(input), "gid",
+                                      node.shape, leaf_strides);
+                    body << "float v" << input << "=A" << input << "[idx_"
+                         << input << "];";
+                }
+                const auto ref_expr = [](int64_t ref) {
+                    if (ref >= 0) return "v" + std::to_string(ref);
+                    return "t" + std::to_string(-1 - ref);
+                };
+                for (size_t instruction = 0; instruction < instruction_count; ++instruction) {
+                    const size_t base = kFusedHeaderSize +
+                                        instruction * kFusedInstructionWidth;
+                    const auto op = static_cast<FusedOp>(node.args[base]);
+                    const std::string lhs = ref_expr(node.args[base + 1]);
+                    const std::string rhs = ref_expr(node.args[base + 2]);
+                    body << "float t" << instruction << "=";
+                    switch (op) {
+                        case FusedOp::ADD:
+                            body << lhs << '+' << rhs;
+                            break;
+                        case FusedOp::SUB:
+                            body << lhs << '-' << rhs;
+                            break;
+                        case FusedOp::MUL:
+                            body << lhs << '*' << rhs;
+                            break;
+                        case FusedOp::DIV:
+                            body << lhs << '/' << rhs;
+                            break;
+                        case FusedOp::UNARY:
+                            if (node.args[base + 3] < 0 ||
+                                node.args[base + 3] >= kUnaryCount) {
+                                throw std::runtime_error(
+                                    "generateKernels: invalid fused unary kind");
+                            }
+                            body << kUnaryNames[node.args[base + 3]] << '(' << lhs << ')';
+                            break;
+                    }
+                    body << ';';
+                }
+                body << "Out[gid]=" << ref_expr(node.args[2]) << ";}\n";
                 graph.configs.push_back(dispatch_config(name, numel));
                 any_kernel = true;
                 break;
