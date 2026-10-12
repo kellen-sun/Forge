@@ -16,6 +16,7 @@ class Ops:
     ZEROS = 14
     RAND = 15
     RANDN = 16
+    FUSED_ELEMENTWISE = 17
 
 
 class Node:

@@ -27,6 +27,7 @@ add_library(forge_lib STATIC
     cpp/src/cse.cpp
     cpp/src/compiler.mm
     cpp/src/dce.cpp
+    cpp/src/elementwise_fusion.cpp
     cpp/src/forge_handle.mm
     cpp/src/graph_builder.cpp
     cpp/src/memory_arena.cpp

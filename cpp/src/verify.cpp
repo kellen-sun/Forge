@@ -1,7 +1,11 @@
 #include <stdexcept>
 #include <string>
 
+#include "../include/fused_elementwise.h"
 #include "../include/pass.h"
+
+static constexpr int kUnknownArity = -1;
+static constexpr int kVariableArity = -2;
 
 static int expected_arity(OpCode op) {
     switch (op) {
@@ -25,10 +29,12 @@ static int expected_arity(OpCode op) {
         case OpCode::SUB:
         case OpCode::UPDATE:
             return 2;
+        case OpCode::FUSED_ELEMENTWISE:
+            return kVariableArity;
         case OpCode::COUNT:
-            return -1;
+            return kUnknownArity;
     }
-    return -1;
+    return kUnknownArity;
 }
 
 void verify(const IR& ir) {
@@ -43,11 +49,45 @@ void verify(const IR& ir) {
     for (int i = 0; i < n; ++i) {
         const Node& node = ir.nodes[i];
         const int arity = expected_arity(node.op);
-        if (arity < 0) {
+        if (arity == kUnknownArity) {
             throw std::runtime_error("verify: unknown opcode at node " + std::to_string(i));
         }
-        if (static_cast<int>(node.inputs.size()) != arity) {
+        if (arity >= 0 && static_cast<int>(node.inputs.size()) != arity) {
             throw std::runtime_error("verify: node " + std::to_string(i) + " has wrong arity");
+        }
+        if (node.op == OpCode::FUSED_ELEMENTWISE) {
+            if (node.args.size() < kFusedHeaderSize ||
+                node.args[0] != kFusedEncodingVersion || node.args[1] < 1 ||
+                node.args.size() !=
+                    kFusedHeaderSize +
+                        static_cast<size_t>(node.args[1]) * kFusedInstructionWidth) {
+                throw std::runtime_error("verify: malformed FUSED_ELEMENTWISE encoding");
+            }
+            const int64_t instruction_count = node.args[1];
+            const auto valid_ref = [&](int64_t ref, int64_t instruction) {
+                if (ref >= 0) return ref < static_cast<int64_t>(node.inputs.size());
+                const int64_t temp = -1 - ref;
+                return temp >= 0 && temp < instruction;
+            };
+            for (int64_t instruction = 0; instruction < instruction_count; ++instruction) {
+                const size_t base = kFusedHeaderSize +
+                                    static_cast<size_t>(instruction) * kFusedInstructionWidth;
+                const int64_t op = node.args[base];
+                if (op < static_cast<int64_t>(FusedOp::ADD) ||
+                    op > static_cast<int64_t>(FusedOp::UNARY) ||
+                    !valid_ref(node.args[base + 1], instruction) ||
+                    (op != static_cast<int64_t>(FusedOp::UNARY) &&
+                     !valid_ref(node.args[base + 2], instruction))) {
+                    throw std::runtime_error("verify: malformed FUSED_ELEMENTWISE instruction");
+                }
+                if (op == static_cast<int64_t>(FusedOp::UNARY) &&
+                    (node.args[base + 3] < 0 || node.args[base + 3] >= kUnaryCount)) {
+                    throw std::runtime_error("verify: invalid fused unary kind");
+                }
+            }
+            if (!valid_ref(node.args[2], instruction_count)) {
+                throw std::runtime_error("verify: invalid FUSED_ELEMENTWISE output");
+            }
         }
         if (node.shape.size() != node.strides.size()) {
             throw std::runtime_error("verify: node " + std::to_string(i) +

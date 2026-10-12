@@ -18,6 +18,20 @@ def test_forge_elementwise_chain():
     assert compiled.shape == eager.shape
 
 
+def test_forge_fused_elementwise_chain():
+    @forge
+    def f(a, b, c):
+        return (a * b + c).tanh()
+
+    a = Array([[0.1, 0.2], [0.3, 0.4]])
+    b = Array([[1.0, 2.0], [3.0, 4.0]])
+    c = Array([[0.5, 0.6], [0.7, 0.8]])
+    eager = (a * b + c).tanh()
+    compiled = f(a, b, c)
+    assert compiled.list() == eager.list()
+    assert compiled.shape == eager.shape
+
+
 def test_forge_matmul_2d():
     @forge
     def f(a, b):

@@ -1,0 +1,8 @@
+- 1 1 1 1 1 1
+- 1 1 1 1 1 1
+- 1 1 1 1 1 1
+op_3_fused 4 1 1 4 1 1
+---
+#include <metal_stdlib>
+using namespace metal;
+kernel void op_3_fused(device float* Out [[buffer(0)]],const device float* A0 [[buffer(1)]],const device float* A1 [[buffer(2)]],const device float* A2 [[buffer(3)]],uint gid [[thread_position_in_grid]]){long idx_0=0;{uint remaining=gid;{uint c=remaining%2u;idx_0+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_0+=long(c)*2L;remaining/=2u;}}float v0=A0[idx_0];long idx_1=0;{uint remaining=gid;{uint c=remaining%2u;idx_1+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_1+=long(c)*2L;remaining/=2u;}}float v1=A1[idx_1];long idx_2=0;{uint remaining=gid;{uint c=remaining%2u;idx_2+=long(c)*1L;remaining/=2u;}{uint c=remaining%2u;idx_2+=long(c)*2L;remaining/=2u;}}float v2=A2[idx_2];float t0=v0+v1;float t1=t0+v2;float t2=exp(t1);Out[gid]=t2;}
