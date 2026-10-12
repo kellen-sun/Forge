@@ -37,14 +37,18 @@ static int identity_source(const IR& ir, const Node& node) {
     return (additive_identity || multiplicative_identity) ? lhs_index : -1;
 }
 
-static std::string cse_key(const Node& node) {
+static std::string cse_key(const IR& ir, const Node& node,
+                           const std::unordered_map<int, int>& versions) {
     std::ostringstream key;
     key << static_cast<int>(node.op) << ':' << node.offset << ':';
     std::vector<int> inputs = node.inputs;
     if ((node.op == OpCode::ADD || node.op == OpCode::MUL) && inputs.size() == 2) {
         std::sort(inputs.begin(), inputs.end());
     }
-    for (int input : inputs) key << input << ',';
+    for (int input : inputs) {
+        auto it = versions.find(storage_root(ir.nodes, input));
+        key << input << '@' << (it == versions.end() ? 0 : it->second) << ',';
+    }
     key << '|';
     for (int64_t arg : node.args) key << arg << ',';
     key << '|';
@@ -57,6 +61,7 @@ static std::string cse_key(const Node& node) {
 void CSEPass::run(IR& ir) {
     std::unordered_map<std::string, int> available;
     std::unordered_set<int> mutated_roots;
+    std::unordered_map<int, int> versions;
     std::vector<int> remap(ir.nodes.size());
     for (int i = 0; i < static_cast<int>(ir.nodes.size()); ++i) remap[i] = i;
 
@@ -69,6 +74,10 @@ void CSEPass::run(IR& ir) {
     for (int i = 0; i < static_cast<int>(ir.nodes.size()); ++i) {
         Node& node = ir.nodes[i];
         for (int& input : node.inputs) input = remap[input];
+
+        if (node.op == OpCode::UPDATE && !node.inputs.empty()) {
+            ++versions[storage_root(ir.nodes, node.inputs[0])];
+        }
 
         if (is_pure_elementwise(node.op)) {
             const bool node_mutated =
@@ -98,7 +107,7 @@ void CSEPass::run(IR& ir) {
             continue;
         }
 
-        const std::string key = cse_key(node);
+        const std::string key = cse_key(ir, node, versions);
         auto [it, inserted] = available.emplace(key, i);
         if (!inserted) remap[i] = it->second;
     }
