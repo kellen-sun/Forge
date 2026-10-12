@@ -71,6 +71,48 @@ TEST(CSE, DoesNotMergeValueThatIsLaterMutated) {
     EXPECT_NO_THROW(verify(ir));
 }
 
+TEST(CSE, DoesNotMergeAcrossWriteToAnOperandsStorage) {
+    IR ir;
+    ir.nodes = {
+        make_input({3}, {1}),
+        make_layout(OpCode::VIEW, 0, {2}, {1}, 0),
+        constant(1.0f),
+        make_add(1, 2, {2}, {1}),
+        constant(5.0f),
+        {OpCode::UPDATE, {0, 4}, {3}, {1}, 0, {1, 1, 0, 0}},
+        make_add(1, 2, {2}, {1}),
+        make_layout(OpCode::VIEW, 5, {2}, {1}, 0),
+        make_add(6, 7, {2}, {1}),
+    };
+    ir.output_index = 8;
+
+    CSEPass{}.run(ir);
+
+    EXPECT_EQ(ir.nodes[8].inputs, (std::vector<int>{6, 7}));
+    EXPECT_NO_THROW(verify(ir));
+}
+
+TEST(CSE, MergesReadsOfAnOperandWithNoInterveningWrite) {
+    IR ir;
+    ir.nodes = {
+        make_input({3}, {1}),
+        make_layout(OpCode::VIEW, 0, {2}, {1}, 0),
+        constant(1.0f),
+        make_add(1, 2, {2}, {1}),
+        make_add(1, 2, {2}, {1}),
+        constant(5.0f),
+        {OpCode::UPDATE, {0, 5}, {3}, {1}, 0, {1, 1, 0, 0}},
+        make_layout(OpCode::VIEW, 6, {2}, {1}, 0),
+        make_add(4, 7, {2}, {1}),
+    };
+    ir.output_index = 8;
+
+    CSEPass{}.run(ir);
+
+    EXPECT_EQ(ir.nodes[8].inputs, (std::vector<int>{3, 7}));
+    EXPECT_NO_THROW(verify(ir));
+}
+
 TEST(CSE, AppliesFastMathCommutativityAndZeroProduct) {
     Node zero = constant(0.0f);
     IR ir;
