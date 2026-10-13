@@ -306,6 +306,19 @@ def test_forge_update_rejects_overlapping_rhs():
         f(Array([1.0, 2.0, 3.0]))
 
 
+def test_forge_cse_invalidated_by_input_update():
+    @forge
+    def f(x):
+        view = x[:2]
+        before_write = view + 1.0
+        x[0] = 5.0
+        return view + 1.0
+
+    x = Array([1.0, 2.0, 3.0])
+    compiled = f(x)
+    assert compiled.list() == [6.0, 3.0]
+
+
 @pytest.mark.parametrize(
     ("op_name", "expected"),
     [
