@@ -363,6 +363,19 @@ def test_forge_fusion_after_additive_identity():
     assert f(Array([1.0, 2.0, 3.0])).list() == [4.0, 6.0, 8.0]
 
 
+def test_forge_cse_invalidated_by_input_update():
+    @forge
+    def f(x):
+        view = x[:2]
+        before_write = view + 1.0
+        x[0] = 5.0
+        return view + 1.0
+
+    x = Array([1.0, 2.0, 3.0])
+    compiled = f(x)
+    assert compiled.list() == [6.0, 3.0]
+
+
 @pytest.mark.parametrize(
     ("op_name", "expected"),
     [
