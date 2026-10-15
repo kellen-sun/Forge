@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "../include/fused_elementwise.h"
-#include "../include/graph_builder.h"
 #include "../include/pass.h"
 
 static bool fusible_op(OpCode op) {
@@ -123,7 +122,5 @@ void ElementwiseFusionPass::run(IR& ir) {
         fused.args.push_back(instruction.attr);
     }
 
-    GraphBuilder builder(ir);
-    const int fused_id = builder.append(std::move(fused));
-    builder.replace(root, fused_id);
+    ir.nodes[root] = std::move(fused);
 }
