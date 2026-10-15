@@ -306,6 +306,63 @@ def test_forge_update_rejects_overlapping_rhs():
         f(Array([1.0, 2.0, 3.0]))
 
 
+def test_forge_fusion_read_before_update_unary_chain():
+    @forge
+    def f(x):
+        a = x + 1
+        x[0] = 100
+        return (a * 2).exp().log()
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == pytest.approx([4.0, 6.0, 8.0], rel=1e-5)
+    assert x.list() == [100.0, 2.0, 3.0]
+
+
+def test_forge_fusion_read_before_update():
+    @forge
+    def f(x):
+        y = (x + 1) * 2
+        x[0] = 100
+        return y
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [4.0, 6.0, 8.0]
+    assert x.list() == [100.0, 2.0, 3.0]
+
+
+def test_forge_fusion_view_read_before_update():
+    @forge
+    def f(x):
+        a = x[0:2] * 3
+        x[1] = 50
+        return (a + 1).exp().log()
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == pytest.approx([4.0, 7.0], rel=1e-5)
+    assert x.list() == [1.0, 50.0, 3.0]
+
+
+def test_forge_fusion_root_consumed_by_update():
+    @forge
+    def f(x, z):
+        y = (x + 1) * 2
+        z[:] = y
+        return y
+
+    x = Array([1.0, 2.0, 3.0])
+    z = Array([0.0, 0.0, 0.0])
+    assert f(x, z).list() == [4.0, 6.0, 8.0]
+    assert z.list() == [4.0, 6.0, 8.0]
+
+
+def test_forge_fusion_after_additive_identity():
+    @forge
+    def f(x):
+        return ((x + 1) * 2) + 0.0
+
+    assert f(Array([1.0, 2.0, 3.0])).list() == [4.0, 6.0, 8.0]
+
+
 def test_forge_cse_invalidated_by_input_update():
     @forge
     def f(x):
