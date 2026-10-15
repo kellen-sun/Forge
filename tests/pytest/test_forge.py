@@ -363,6 +363,81 @@ def test_forge_fusion_after_additive_identity():
     assert f(Array([1.0, 2.0, 3.0])).list() == [4.0, 6.0, 8.0]
 
 
+def test_forge_view_sees_later_base_write():
+    @forge
+    def f(x):
+        v = x[0:2]
+        t = x.T
+        x[0, 1] = 50
+        return v * 1 + t
+
+    x = Array([[1.0, 2.0], [3.0, 4.0]])
+    assert f(x).list() == [[2.0, 53.0], [53.0, 8.0]]
+
+
+def test_forge_write_through_view_seen_by_base_and_sibling():
+    @forge
+    def f(x):
+        v = x[0:2]
+        w = x[1:3]
+        v[1] = 50
+        return x * 1 + w[0]
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [51.0, 100.0, 53.0]
+    assert x.list() == [1.0, 50.0, 3.0]
+
+
+def test_forge_return_view_after_write_through_it():
+    @forge
+    def f(x):
+        v = x[0:2]
+        v[1] = 50
+        return v
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [1.0, 50.0]
+    assert x.list() == [1.0, 50.0, 3.0]
+
+
+def test_forge_write_through_view_taken_before_base_write():
+    @forge
+    def f(x):
+        v = x[0:2]
+        x[1] = 50
+        v[0] = 7
+        return x * 1
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [7.0, 50.0, 3.0]
+
+
+def test_forge_reads_of_three_versions():
+    @forge
+    def f(x):
+        a = x * 2
+        x[0] = 100
+        b = x * 2
+        x[1] = 200
+        return a + b + x
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [302.0, 208.0, 15.0]
+    assert x.list() == [100.0, 200.0, 3.0]
+
+
+def test_forge_fused_reads_before_and_after_write_through_view():
+    @forge
+    def f(x):
+        a = (x + 1) * 2
+        v = x[0:2]
+        v[1] = 50
+        return a + x
+
+    x = Array([1.0, 2.0, 3.0])
+    assert f(x).list() == [5.0, 56.0, 11.0]
+
+
 def test_forge_cse_invalidated_by_input_update():
     @forge
     def f(x):
