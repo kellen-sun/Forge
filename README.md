@@ -23,7 +23,7 @@ a2 = Array([[4.0, 5.0], [6.0, 7.0]])
 result = a1 + a2
 ```
 
-``@forge`` traces the function on the first call for those input shapes, fuses the elementwise chain, and reuses that graph on later calls with same shapes.
+``@forge`` traces the function on the first call for those input shapes, fuses the elementwise chain, and reuses that graph on later calls with the same shapes.
 ```py
 from Forge import Array, forge
 
