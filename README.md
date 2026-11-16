@@ -12,7 +12,7 @@ I built Forge and continue to work on it primarily because it's a passion projec
 
 ### Features:
 1. Eager Execution: operations run asynchronously, seamlessly on GPU with a familiar API design
-2. JIT Graph Compilation (WIP): functions are compiled and optimized using the ``@forge`` decorator to be re-run more efficiently
+2. JIT Graph Compilation: ``@forge`` traces a function, compiles it to Metal kernels (fusing elementwise chains into one kernel), and reuses that graph on later calls
 
 ### Example:
 This simple code snippet below will add the two arrays using your GPU.
@@ -21,6 +21,20 @@ from Forge import Array
 a1 = Array([[1.0, 2.0], [3.0, 4.0]])
 a2 = Array([[4.0, 5.0], [6.0, 7.0]])
 result = a1 + a2
+```
+
+``@forge`` traces the function on the first call for those input shapes, fuses the elementwise chain, and reuses that graph on later calls with the same shapes.
+```py
+from Forge import Array, forge
+
+@forge
+def f(a, b):
+    return (a + b) * 2.0
+
+a = Array([1.0, 2.0])
+b = Array([3.0, 4.0])
+print(f(a, b).list())  # traces, compiles, and runs
+print(f(a, b).list())  # reuses the compiled graph
 ```
 
 ### Further information

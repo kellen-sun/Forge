@@ -69,7 +69,7 @@ Run:
 ```
 Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
 
-Python and C++ tables that must stay synced (opcodes, unary/nullary names, eager Metal kernel names) are checked by gtests in ``tests/gtest/test_py_cpp_abi.cpp``. That runs in GitHub CI.
+Python and C++ tables that must stay synced (opcodes, unary/nullary names, eager Metal kernel names) are checked by gtests in ``tests/gtest/test_py_cpp_abi.cpp``. GitHub CI builds with ``-DBUILD_TESTS=ON`` and runs ``./build/tests/forge_tests``. It does not run pytest.
 
 
 ##### Codegen goldens
@@ -95,6 +95,20 @@ python3 tests/gtest/codegen_tests/view_golden.py tests/gtest/codegen_tests/add_c
 
 Configs (kernel name, grid, group) print as-is; the shader after ``---`` is indented so Metal ``[[buffer(...)]]`` attributes stay on the same line as the declaration.
 
+### Compiler passes
+``optimize_graph`` in ``cpp/src/compiler.cpp`` runs this order:
+
+1. ``ShapeInferPass``
+2. ``FunctionalizePass`` — each write gets a new version of its storage, and later reads (including through views) use that version
+3. ``CanonicalizePass``
+4. ``ConstantFoldPass``
+5. ``CSEPass``
+6. ``ElementwiseFusionPass`` — one walk; a pure elementwise chain becomes one kernel
+7. ``DCEPass``
+8. ``SnapshotStaleReadsPass`` — if a fused kernel would read a value an in-place write already replaced, copy the old buffer. Graphs with no in-place updates skip this
+
+Codegen goldens run the same pipeline, then ``generateKernels``. A new pass has to be inserted in that list. Fusion does not run again after later rewrites, and the snapshot copy is the current way to keep fused reads correct across writes.
+
 ### To run benchmarks
 ```
 pip install numpy torch mlx
@@ -102,7 +116,30 @@ pip install numpy torch mlx
 Then simply run the Python files in ``/benchmarks``
 
 ### To run the code formatter
-Every git commit will run the pre-commit code formatter. You can also run it manually with:
+Install the hook once, from the repo root with the venv active:
+```
+pre-commit install
+```
+After that, every git commit runs the formatter. You can also run it manually with:
 ```
 pre-commit run --all-files
 ```
+
+### Cutting a PyPI release
+The version is written in two places, and they have to match:
+
+- ``pyproject.toml`` — ``version`` under ``[project]``. This is the version pip and the PyPI badge use.
+- ``py/Forge/__init__.py`` — ``__version__``.
+
+GitHub CI does not build or upload a package. From the repo root, on the commit you want to publish (a Mac, so the Metal extension can compile):
+```
+python3 -m pip install build twine
+python3 -m build
+```
+That writes ``dist/forge_metal-<version>-….whl`` and ``dist/forge_metal-<version>.tar.gz``. The wheel tag matches the Python and macOS you built on. Other Python versions and older macOS install the source tarball and compile it.
+
+Upload after that commit is on ``main``:
+```
+twine upload dist/*
+```
+PyPI will not replace a version that is already there, so each upload needs a new version. The package name stays ``forge-metal``.

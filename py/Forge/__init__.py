@@ -4,7 +4,7 @@ from .forge import forge
 from .utils import _set_seed
 
 # package version
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 for op_name in ops.UNARY_OPS:
     globals()[op_name] = getattr(ops, op_name)
