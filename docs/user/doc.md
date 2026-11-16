@@ -13,7 +13,7 @@ We can index into the Array with all the usual methods, with the brackets [4] su
 
 We also support ``len()`` and ``sum()/.sum()``. We can take a transpose using ``Array.T`` and reshape our array with ``Array.reshape()``, using a ``-1`` to fill in a dimension. Note that transposes never make a copy of the underlying data, while reshape usually doesn't, but might if the data to be reshaped is not contiguous in memory.
 
-## ``@forge`` (WIP)
+## ``@forge``
 Decorating a function with ``@forge`` traces it once for a given input shape/strides/offset, generates Metal kernels, and reuses that graph on later calls.
 
 ```py
@@ -38,10 +38,7 @@ Currently this covers:
 - arithmetic assignment inside `@forge`: `+=`, `-=`, `*=`, `/=`
 - vector and 2D matrix multiplication inside `@forge`, including transposed 2D inputs
 
-The compiled path (`@forge`) uses graph optimizations for pure elementwise graphs: constant
-folding, common subexpression elimination including commutative `+`/`*`, rewrites such
-as `x + 0`, `x - 0`, `x * 1`, `x / 1`, and `x * 0`. Eager operations remain op-by-op. Consequently,
-compiled edge cases such as NaN, infinity, and signed zero might be slightly off compared to strict IEEE.
+The compiled path folds constants, eliminates common subexpressions (including commutative `+`/`*`), and fuses a pure elementwise chain such as `tanh(a * b + c)` into one kernel. Rewrites include `x + 0`, `x - 0`, `x * 1`, `x / 1`, and `x * 0`. In-place updates stay consistent with eager execution: if a fused kernel would read a value an in-place write already replaced, the compiler keeps a copy of the old value. Eager operations stay op-by-op. Compiled edge cases such as NaN, infinity, and signed zero can differ slightly from strict IEEE.
 
-Not yet compiled: tiled matmul optimization
+Not yet compiled: tiled matmul. Matmul inside `@forge` is a correctness-first kernel.
 
