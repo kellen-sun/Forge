@@ -12,6 +12,9 @@ inline bool is_storage_alias_op(OpCode op) {
     return is_layout_op(op) || op == OpCode::UPDATE;
 }
 
+inline bool same_layout(const Node& a, const Node& b) {
+    return (a.shape == b.shape) && (a.strides == b.strides) && (a.offset == b.offset);
+}
 
 inline int layout_version(const std::vector<Node>& nodes, int index) {
     while (is_layout_op(nodes[index].op) && !nodes[index].inputs.empty()) {

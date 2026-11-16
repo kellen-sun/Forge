@@ -12,10 +12,6 @@ static bool is_pure_elementwise(OpCode op) {
            op == OpCode::MUL || op == OpCode::DIV || op == OpCode::UNARY;
 }
 
-static bool same_layout(const Node& a, const Node& b) {
-    return a.shape == b.shape && a.strides == b.strides && a.offset == b.offset;
-}
-
 static bool is_singleton_constant(const IR& ir, int index, float value) {
     const Node& node = ir.nodes[index];
     return node.op == OpCode::CONSTANT && node.args.size() == 1 &&

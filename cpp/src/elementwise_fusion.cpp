@@ -2,15 +2,12 @@
 #include <vector>
 
 #include "../include/fused_elementwise.h"
+#include "../include/ir_utils.h"
 #include "../include/pass.h"
 
 static bool fusible_op(OpCode op) {
     return op == OpCode::ADD || op == OpCode::SUB || op == OpCode::MUL ||
            op == OpCode::DIV || op == OpCode::UNARY;
-}
-
-static bool same_layout(const Node& a, const Node& b) {
-    return a.shape == b.shape && a.strides == b.strides && a.offset == b.offset;
 }
 
 struct FusedInstruction {
