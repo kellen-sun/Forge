@@ -12,7 +12,7 @@ I built Forge and continue to work on it primarily because it's a passion projec
 
 ### Features:
 1. Eager Execution: operations run asynchronously, seamlessly on GPU with a familiar API design
-2. JIT Graph Compilation (WIP): functions are compiled and optimized using the ``@forge`` decorator to be re-run more efficiently
+2. JIT Graph Compilation: ``@forge`` traces a function, compiles it to Metal kernels (fusing elementwise chains into one kernel), and reuses that graph on later calls
 
 ### Example:
 This simple code snippet below will add the two arrays using your GPU.
