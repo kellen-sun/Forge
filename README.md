@@ -23,6 +23,20 @@ a2 = Array([[4.0, 5.0], [6.0, 7.0]])
 result = a1 + a2
 ```
 
+``@forge`` traces the function on the first call for those input shapes, fuses the elementwise chain, and reuses that graph on later calls with same shapes.
+```py
+from Forge import Array, forge
+
+@forge
+def f(a, b):
+    return (a + b) * 2.0
+
+a = Array([1.0, 2.0])
+b = Array([3.0, 4.0])
+print(f(a, b).list())  # traces, compiles, and runs
+print(f(a, b).list())  # reuses the compiled graph
+```
+
 ### Further information
 If this sounds interesting and you'd like to try out the library, you can install it and run it on your own macbook using [this guide](https://github.com/kellen-sun/Forge/tree/main/docs/user/doc.md).
 
