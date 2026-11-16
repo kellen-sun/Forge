@@ -69,7 +69,7 @@ Run:
 ```
 Refer to ``gtest`` documentation, to learn the commands to run specific files or tests at a time, and other options etc.
 
-Python and C++ tables that must stay synced (opcodes, unary/nullary names, eager Metal kernel names) are checked by gtests in ``tests/gtest/test_py_cpp_abi.cpp``. That runs in GitHub CI.
+Python and C++ tables that must stay synced (opcodes, unary/nullary names, eager Metal kernel names) are checked by gtests in ``tests/gtest/test_py_cpp_abi.cpp``. GitHub CI builds with ``-DBUILD_TESTS=ON`` and runs ``./build/tests/forge_tests``. It does not run pytest.
 
 
 ##### Codegen goldens
@@ -94,6 +94,20 @@ python3 tests/gtest/codegen_tests/view_golden.py tests/gtest/codegen_tests/add_c
 ```
 
 Configs (kernel name, grid, group) print as-is; the shader after ``---`` is indented so Metal ``[[buffer(...)]]`` attributes stay on the same line as the declaration.
+
+### Compiler passes
+``optimize_graph`` in ``cpp/src/compiler.cpp`` runs this order:
+
+1. ``ShapeInferPass``
+2. ``FunctionalizePass`` — each write gets a new version of its storage, and later reads (including through views) use that version
+3. ``CanonicalizePass``
+4. ``ConstantFoldPass``
+5. ``CSEPass``
+6. ``ElementwiseFusionPass`` — one walk; a pure elementwise chain becomes one kernel
+7. ``DCEPass``
+8. ``SnapshotStaleReadsPass`` — if a fused kernel would read a value an in-place write already replaced, copy the old buffer. Graphs with no in-place updates skip this
+
+Codegen goldens run the same pipeline, then ``generateKernels``. A new pass has to be inserted in that list. Fusion does not run again after later rewrites, and the snapshot copy is the current way to keep fused reads correct across writes.
 
 ### To run benchmarks
 ```
