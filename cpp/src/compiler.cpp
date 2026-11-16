@@ -14,11 +14,13 @@
 void optimize_graph(IR& ir) {
     PassManager pm;
     pm.addPass(std::make_unique<ShapeInferPass>());
+    pm.addPass(std::make_unique<FunctionalizePass>());
     pm.addPass(std::make_unique<CanonicalizePass>());
     pm.addPass(std::make_unique<ConstantFoldPass>());
     pm.addPass(std::make_unique<CSEPass>());
     pm.addPass(std::make_unique<ElementwiseFusionPass>());
     pm.addPass(std::make_unique<DCEPass>());
+    pm.addPass(std::make_unique<SnapshotStaleReadsPass>());
     pm.run(ir);
 }
 // Could generate Fused Kernels, with special OpCodes

@@ -30,6 +30,12 @@ class ShapeInferPass : public Pass {
     void run(IR& ir) override;
 };
 
+class FunctionalizePass : public Pass {
+   public:
+    const char* name() const override { return "functionalize"; }
+    void run(IR& ir) override;
+};
+
 class CanonicalizePass : public Pass {
    public:
     const char* name() const override { return "canonicalize"; }
@@ -57,5 +63,11 @@ class ElementwiseFusionPass : public Pass {
 class DCEPass : public Pass {
    public:
     const char* name() const override { return "dce"; }
+    void run(IR& ir) override;
+};
+
+class SnapshotStaleReadsPass : public Pass {
+   public:
+    const char* name() const override { return "snapshot-stale-reads"; }
     void run(IR& ir) override;
 };

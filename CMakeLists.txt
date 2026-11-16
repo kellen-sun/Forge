@@ -29,6 +29,7 @@ add_library(forge_lib STATIC
     cpp/src/dce.cpp
     cpp/src/elementwise_fusion.cpp
     cpp/src/forge_handle.mm
+    cpp/src/functionalize.cpp
     cpp/src/graph_builder.cpp
     cpp/src/memory_arena.cpp
     cpp/src/pass_manager.cpp
@@ -36,6 +37,7 @@ add_library(forge_lib STATIC
     cpp/src/metal_utils.mm
     cpp/src/runtime.mm
     cpp/src/shape_infer.cpp
+    cpp/src/snapshot_stale_reads.cpp
 )
 
 target_link_libraries(forge_lib PUBLIC
